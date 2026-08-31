@@ -1,0 +1,36 @@
+# requirements-soyun.txt — extra packages soyun installed into .venv
+# ---------------------------------------------------------------------------
+# Assumes:  python -m venv .venv --system-site-packages
+#   -> torch is INHERITED from the base conda env (/opt/conda), NOT pinned here.
+#   -> numpy is shadowed inside the venv (1.24.4) without touching base (1.26.3).
+#
+# Confirmed working base (2026-08-31, RTX 3090 instance, pre-replacement):
+#   python 3.10.13
+#   torch 2.2.0  (torch.version.cuda 12.1, cudnn 8902)
+#   NVIDIA driver 535.154.05
+#   NOTE: that GPU had a broken fp16 datapath (see docs/soyun/PLUMBING_SMOKE.md);
+#         the *software* stack below is fine — only the card was defective.
+#
+# Restore on a new server:
+#   cd <repo>
+#   python -m venv .venv --system-site-packages
+#   .venv/bin/pip install -U pip
+#   .venv/bin/pip install -r abr_spec/requirements-soyun.txt
+#   # pytest is used by the speculative unit tests; it is in the base env here,
+#   # if missing:  .venv/bin/pip install pytest
+#
+# This complements the repo-root requirements-inference.txt (same core pins);
+# the list below is the exact `pip freeze --local` of soyun's venv.
+# ---------------------------------------------------------------------------
+accelerate==0.23.0
+huggingface-hub==0.17.3
+munch==4.0.0
+numpy==1.24.4
+peft==0.6.2
+protobuf==4.25.3
+regex==2026.8.31
+safetensors==0.4.2
+sentencepiece==0.1.99
+tokenizers==0.14.1
+transformers==4.34.1
+yacs==0.1.8
