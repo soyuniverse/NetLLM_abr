@@ -3,7 +3,16 @@ __pycache__
 .idea
 .vscode
 
-results
+# Shared experiment output is ignored, except soyun's small text results
+# (*.json / *.csv / *.md are tracked so runs stay reviewable in git).
+/results/*
+!/results/soyun/
+/results/soyun/**
+!/results/soyun/**/
+!/results/soyun/**/.gitkeep
+!/results/soyun/**/*.json
+!/results/soyun/**/*.csv
+!/results/soyun/**/*.md
 
 downloaded_plms
 ft_plms

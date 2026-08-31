@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#
+# soyun / spec-abr guardrail.
+# Rejects a commit that stages any file outside the write-allowed paths
+# defined in AGENTS.md (plus AGENTS.md and .gitignore themselves).
+#
+# Source of truth: abr_spec/hooks/pre-commit  (tracked by git).
+# .git/hooks/ is NOT tracked, so after every fresh clone run:
+#     bash abr_spec/hooks/install.sh
+
+set -euo pipefail
+
+allowed_regex='^(abr_spec/|results/soyun/|docs/soyun/|adaptive_bitrate_streaming/plm_special/speculative/|AGENTS\.md$|\.gitignore$)'
+
+violations=()
+while IFS= read -r file; do
+	[ -n "$file" ] || continue
+	if ! printf '%s\n' "$file" | grep -Eq "$allowed_regex"; then
+		violations+=("$file")
+	fi
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "${#violations[@]}" -gt 0 ]; then
+	echo "pre-commit: blocked — staged files outside soyun's write-allowed paths:" >&2
+	for f in "${violations[@]}"; do
+		echo "    $f" >&2
+	done
+	echo >&2
+	echo "Write-allowed: abr_spec/  results/soyun/  docs/soyun/" >&2
+	echo "               adaptive_bitrate_streaming/plm_special/speculative/  (read-only for now)" >&2
+	echo "               AGENTS.md  .gitignore" >&2
+	echo "Record needed changes elsewhere in docs/soyun/NEEDS_UPSTREAM.md instead." >&2
+	exit 1
+fi
