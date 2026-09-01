@@ -1,25 +1,27 @@
 # HANDOFF — resume point (soyun / speculative inference)
 
-**As of 2026-08-31, branch `soyun/spec-abr`.** Instance being replaced (GPU fp16
+**As of 2026-09-01, branch `soyun/spec-abr`.** Old instance replaced (GPU fp16
 defect). Everything needed is committed; follow the steps below on the new box.
 
 ## Confirmed facts (3)
 
-1. **No fork-compatible ABR checkpoint exists.** The one URL the repo references
-   (`scripts/prepare_models.py` gdrive id `17UyXJ9…` = local `try_llama2_7b.zip`)
-   is a **viewport-prediction** checkpoint (`task_head` out=3, r=32, 5-module
-   `modules_except_plm.bin`). This fork's `OfflineRLPolicy` needs r=128 + a
-   33-tensor / 12-module `modules_except_plm.bin` with `action_head` out=6.
-   Mismatch is not fork-introduced — even the first ABR commit `3213666` has the
-   new layout. → [[CHECKPOINT_RECOVERY]].
-2. **This instance's GPU cannot do fp16/bf16** — `torch.randn(4096,4096,
-   dtype=float16).cuda()` → all-NaN; fp32→fp16 cast on CUDA → NaN. fp32 works but
-   Llama-2-7b fp32 (~26 GB) > 24 GB VRAM. On-disk weights verified finite. →
-   [[PLUMBING_SMOKE]] §3, repro `abr_spec/gpu_fp16_diagnostic.py`.
+1. **The official ABR checkpoint exists and is fork-compatible** (resolved
+   2026-09-01). Upstream ABR README's Drive id
+   `17UyXJ9rGc0wKUkAhQ4wMrYDEbRPRjil0` (= `scripts/prepare_models.py:16`) serves
+   a **288 MB** zip (sha `27b3b72b…`): r=128 LoRA + 33-tensor / 12-module
+   `modules_except_plm.bin`, `action_head (6,4096)`. `abr_spec/validate_ckpt.py`
+   → **ABR 호환 확인**, CPU `load_model` sim → **PASS**. The earlier "must
+   retrain" was caused by a stale *viewport* zip pre-staged on the old instance
+   (`/root/try_llama2_7b.zip`, sha `57062c71`). → [[CHECKPOINT_RECOVERY]],
+   [[ASSETS]] §3, `results/soyun/ckpt_validation_20260901/`.
+2. **The old instance's GPU could not do fp16/bf16** — `torch.randn(4096,4096,
+   dtype=float16).cuda()` → all-NaN. fp32 worked but 7B fp32 (~26 GB) > 24 GB.
+   → [[PLUMBING_SMOKE]] §3, repro `abr_spec/gpu_fp16_diagnostic.py`. **Run this
+   first on the new GPU.**
 3. **Speculative logic is sound in isolation** — `pytest
    adaptive_bitrate_streaming/tests/test_mpc_draft.py
    adaptive_bitrate_streaming/tests/test_speculative_acceptance.py` → **11
-   passed**. The blocker is purely the end-to-end `run_plm.py` checkpoint path.
+   passed**. The only remaining blocker was the GPU.
 
 ## First steps on the new server
 
@@ -39,23 +41,29 @@ huggingface-cli download meta-llama/Llama-2-7b-hf --local-dir downloaded_plms/ll
 
 ## Action branches
 
-### Branch A — team lead provides a fork-compatible checkpoint
-Drop its 3 files into `adaptive_bitrate_streaming/data/ft_plms/try_llama2_7b/`
-(or anywhere, use `--model-dir`). First command — the cheapest smoke:
+### Branch A — use the official ABR checkpoint (DEFAULT — team lead's instruction)
 ```bash
+# fetch + place (see docs/soyun/ASSETS.md §3 for the checkpoint_ready() gotcha)
+python scripts/prepare_models.py         # -> adaptive_bitrate_streaming/data/ft_plms/try_llama2_7b/
+.venv/bin/python abr_spec/validate_ckpt.py adaptive_bitrate_streaming/data/ft_plms/try_llama2_7b
+# expect: VERDICT: ABR 호환 확인   (if VP 재확인 -> a stale dir was there; delete + re-fetch)
+
+# cheapest smoke:
 cd adaptive_bitrate_streaming
 ../.venv/bin/python run_plm.py --test --fp16 --seed 1 \
   --plm-type llama --plm-size base --rank 128 \
   --plm-dir ../downloaded_plms/llama/base \
-  --model-dir <checkpoint dir> \
+  --model-dir data/ft_plms/try_llama2_7b \
   --trace fcc-test --trace-num 2 --video video1 --fixed-order \
   --device cuda:0 --device-out cuda:0 \
   --temporal-selector none --token-selector none --speculative-draft-steps 0
 ```
 Then the 6-condition matrix from README (`$COMMON`), routed through
 `abr_spec/run_wrapped.py` so outputs land under `results/soyun/`.
+CPU pre-checks already done (`load_model` sim PASS); the only unknown left is
+GPU forward numerics — hence fact #2's `gpu_fp16_diagnostic.py` gate.
 
-### Branch B — retrain approved
+### Branch B — retrain (fallback only, if the official checkpoint ever fails on GPU)
 ```bash
 python abr_spec/run_wrapped.py --run-id smoke_ckpt_1ep_<date> --phase adapt \
   --ckpt-name smoke_ckpt_1ep -- \
@@ -78,15 +86,14 @@ and `cfg.results_dir` → `results/soyun/<run_id>/<phase>/raw/`.
 
 ## Open items — NEEDS_UPSTREAM ([[NEEDS_UPSTREAM]])
 
-- **#1** README/`$COMMON` say `--rank 128`; the (wrong) bundled checkpoint is
-  r=32. `run_official_lora_ablation.validate_official_checkpoint` enforces
-  `r == --rank`. Real fix rides on #2.
-- **#2** Bundled `modules_except_plm.bin` is viewport-shaped, not ABR — the ABR
-  README's gdrive link serves a VP checkpoint (upstream publishing error). No
-  ABR checkpoint for this code path exists → retrain or lead provides one.
+- **#1+#2 — RESOLVED (not a bug).** The Drive id is correct; the r=32/head-3
+  file was a stale *viewport* zip pre-staged on the old instance. Official ABR
+  checkpoint validated ABR-compatible. Minor cosmetic note left for upstream:
+  `prepare_models.checkpoint_ready()` skips download on filename presence alone
+  (no rank/shape check) → a stale dir can silently win.
 - **#3** `trainer.py:37-42` — AMP `GradScaler` armed only under `--nbs-v19`, so
-  plain `--fp16 --adapt` has no loss scaling. Latent; would bite after the GPU
-  is fixed. Not today's blocker.
+  plain `--fp16 --adapt` has no loss scaling. Latent; only relevant to Branch B
+  (retrain). Not needed for Branch A.
 
-All three are upstream-file changes → **not** to be made by soyun; escalate to
-the repo maintainer / whoever trained the current `OfflineRLPolicy` layout.
+Escalate #3 (and the #1+#2 cosmetic note) to the repo maintainer; **not** to be
+changed by soyun.

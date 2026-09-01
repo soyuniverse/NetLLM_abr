@@ -1,23 +1,51 @@
 # CHECKPOINT_RECOVERY — fork-compatible ABR checkpoint
 
-**Date:** 2026-08-31 · **Author:** soyun (speculative inference) · READ-ONLY investigation, nothing downloaded or trained.
+**Date:** 2026-08-31, **resolved 2026-09-01** · **Author:** soyun (speculative inference)
 
-Related: [[NEEDS_UPSTREAM]] #1 #2 · [[RECON_SPECULATIVE]] · [[abr-smoke-blocked-checkpoint-mismatch]]
+Related: [[NEEDS_UPSTREAM]] · [[RECON_SPECULATIVE]] · [[abr-smoke-blocked-checkpoint-mismatch]]
+· [[ASSETS]] §3 · `results/soyun/ckpt_validation_20260901/`
+
+---
+
+## ⇒ CONCLUSION: **[해결: 원본 ABR 링크로 확보]** — the fork IS compatible with the official ABR checkpoint
+
+**2026-09-01.** Team lead said "use the trained LoRA from the upstream NetLLM
+GitHub". Followed up: the upstream ABR README's Google-Drive id
+`17UyXJ9rGc0wKUkAhQ4wMrYDEbRPRjil0` (the same id the fork's
+`scripts/prepare_models.py:16` already uses) serves a **288 MB** zip
+(sha256 `27b3b72b…`) that is a genuine **rank-128 ABR** checkpoint:
+`modules_except_plm.bin` = 33 tensors / 12 modules / `action_head (6,4096)`,
+matching this fork's `OfflineRLPolicy` exactly. `abr_spec/validate_ckpt.py`
+verdict: **ABR 호환 확인**; CPU `load_model` simulation: **PASS**.
+
+**Why the earlier "retrain required" was wrong:** the old instance had a
+*different*, 77 MB file pre-staged as `/root/try_llama2_7b.zip`
+(sha256 `57062c71…`, r=32, `task_head` out=3) — a **viewport-prediction**
+checkpoint left over from the sibling `/root/NetLLM` VP project. Both upstream
+READMEs (ABR and VP) tell you to unzip into a folder literally named
+`try_llama2_7b`, so the stale VP zip looked like "the ABR checkpoint" and the
+whole §3 spec-card mismatch flowed from inspecting the wrong file. The fork's
+`prepare_models.py` id was **correct all along**; nothing in the fork is wrong
+here. Retraining (§5) is retained below only as a fallback / for a from-scratch
+reproduction.
+
+**Placement + the one real caveat** (a stale checkpoint dir makes
+`prepare_models.checkpoint_ready()` silently skip the download): [[ASSETS]] §3.
 
 ---
 
-## ⇒ CONCLUSION: **재학습 필요 (retraining required)**
-
-No downloadable ABR checkpoint compatible with this fork exists — the one URL the
-repo references (`scripts/prepare_models.py` Google-Drive id `17UyXJ9…`) serves a
-**viewport-prediction** checkpoint, not ABR. The fork's own
-`run_plm.py --adapt` on the bundled `exp_pool.pkl` produces exactly the required
-format. Recommended parallel step (not a blocker): one question to the team lead
-— *"이 fork 레이아웃으로 ABR 정책을 이미 adapt 한 사람이 있는지"* — since
-`analysis/run_official_lora_ablation.py` (commit `736f7d4`) was clearly written
-expecting such a checkpoint to exist.
-
----
+> ## ⚠ Sections 1–6 below are the 2026-08-31 investigation, written while the
+> stale **VP** `try_llama2_7b.zip` (sha `57062c71…`) was mistaken for the ABR
+> checkpoint. Kept for the audit trail. Corrections:
+> - **§3c / §4** — "the official Drive `17UyXJ9…` = `/root/try_llama2_7b.zip`
+>   (sha `57062c71`)" is **false**. `17UyXJ9…` actually serves a 288 MB zip
+>   (sha `27b3b72b…`), r=128, ABR-compatible. `/root/try_llama2_7b.zip` was an
+>   unrelated pre-staged VP file.
+> - **§4 "No usable one"** → **superseded**: the id downloads fine and validates
+>   ABR-compatible (`abr_spec/validate_ckpt.py`, `results/soyun/ckpt_validation_20260901/`).
+> - **§3a/§3b spec card is still correct** and is exactly what the real ABR
+>   checkpoint matches.
+> - **§5 retrain estimate** stays valid as a *fallback* only.
 
 ## 1. Commit `3cf7f40` "Document upstream ABR data restoration"
 
