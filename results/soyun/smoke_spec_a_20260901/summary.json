@@ -1,0 +1,71 @@
+{
+  "run_id": "smoke_spec_a_20260901",
+  "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03",
+  "instance_changed": true,
+  "prior_run_gpus": {
+    "smoke_ckpt_1ep_20260831": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+    ]
+  },
+  "phases": [
+    {
+      "phase": "test_a",
+      "utc": "2026-09-01T14:59:31.896930+00:00",
+      "status": "ok",
+      "error": null,
+      "wall_seconds": 7.67,
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "2",
+        "video": "video1",
+        "speculative_draft_steps": "0",
+        "speculative_verification_mode": null,
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "metrics": {
+        "inference_calls": 94,
+        "inference_latency_mean_ms": 51.500650323392385,
+        "inference_latency_p50_ms": 56.68841296574101,
+        "inference_latency_p95_ms": 58.32995483651757,
+        "target_plm_calls": 94,
+        "llm_call_reduction_ratio": 0.0,
+        "draft_attempts": 0,
+        "drafted_actions": 0,
+        "accepted_actions": 0,
+        "corrected_actions": 0,
+        "acceptance_rate": 0.0,
+        "executed_speculative_actions": 0,
+        "queued_actions_served": 0,
+        "pending_actions": 0,
+        "fallback_calls": 0,
+        "state_mismatch_fallbacks": 0,
+        "buffer_mismatch_fallbacks": 0,
+        "feature_mismatch_fallbacks": 0,
+        "return_mismatch_fallbacks": 0,
+        "draft_generation_failures": 0,
+        "throughput_predictor_updates": 0,
+        "qoe_raw_mean": 0.6351063829787235,
+        "mean_reward": 0.6351063829787235,
+        "mean_bitrate_mbps": 0.6542553191489362,
+        "mean_rebuffer_s_per_chunk": 0.0,
+        "total_rebuffer_s": 0.0,
+        "mean_smoothness_mbps": 0.019148936170212766,
+        "evaluated_video_chunks": 94,
+        "token_reduction_ratio": 0.0,
+        "speculative_draft_steps": 0,
+        "speculative_verification_mode": "sample",
+        "speculative_buffer_tolerance": 1.0,
+        "speculative_state_tolerance": 0.25,
+        "speculative_return_tolerance": 0.01
+      }
+    }
+  ],
+  "baseline": null
+}

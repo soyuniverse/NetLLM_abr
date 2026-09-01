@@ -18,6 +18,27 @@ Run one phase per process invocation (keeps CUDA state clean between phases):
 
     python abr_spec/run_wrapped.py --run-id RID --phase adapt  --ckpt-name NAME -- <run_plm args>
     python abr_spec/run_wrapped.py --run-id RID --phase test_a --ckpt-name NAME -- <run_plm args>
+
+Cross-instance guard
+--------------------
+The manifest records the GPU string (``nvidia-smi`` name/mem/driver).  Before a
+run, the wrapper scans every other ``results/soyun/*/manifest.json`` and, if any
+earlier run recorded a *different* GPU string, it prints a warning and stamps
+``"instance_changed": true`` on this run's manifest.  ``inference_latency``
+absolute numbers are only comparable within one instance, so a run flagged
+``instance_changed`` (or any run from a different GPU) must not be used as a
+latency baseline.
+
+Latency speedup
+---------------
+Pass ``--baseline-run-id RID`` to have the wrapper write
+``results/soyun/<run-id>/summary.json`` with a ``baseline`` block: per-phase
+``inference_latency`` mean/p50/p95 and the speedup ratio
+``baseline_latency / this_latency``.  The speedup is computed only when the
+baseline run's GPU string matches this run's exactly; otherwise it is left
+``null`` with a note (prior-instance runs are never valid latency baselines).
+``summary.json`` is written on every invocation (baseline block only when the
+flag is given) and aggregates all phases recorded for the run so far.
 """
 import argparse
 import json
@@ -68,6 +89,136 @@ def extract_flag(argv, flag):
     return None
 
 
+# keys copied verbatim out of selector_metrics.json (== the full test_log) into
+# each phase's result.metrics and into summary.json
+METRIC_KEYS = (
+    "inference_calls", "inference_latency_mean_ms", "inference_latency_p50_ms",
+    "inference_latency_p95_ms",
+    "target_plm_calls", "llm_call_reduction_ratio",
+    "draft_attempts", "drafted_actions", "accepted_actions", "corrected_actions",
+    "acceptance_rate", "executed_speculative_actions", "queued_actions_served",
+    "pending_actions", "fallback_calls", "state_mismatch_fallbacks",
+    "buffer_mismatch_fallbacks", "feature_mismatch_fallbacks",
+    "return_mismatch_fallbacks", "draft_generation_failures",
+    "throughput_predictor_updates",
+    "qoe_raw_mean", "mean_reward", "mean_bitrate_mbps",
+    "mean_rebuffer_s_per_chunk", "total_rebuffer_s", "mean_smoothness_mbps",
+    "evaluated_video_chunks", "token_reduction_ratio",
+    "speculative_draft_steps", "speculative_verification_mode",
+    "speculative_buffer_tolerance", "speculative_state_tolerance",
+    "speculative_return_tolerance",
+)
+_LAT = ("inference_latency_mean_ms", "inference_latency_p50_ms",
+        "inference_latency_p95_ms")
+
+
+def prior_run_gpus(current_run_id):
+    """run_id -> sorted GPU strings recorded in results/soyun/<run_id>/manifest.json."""
+    out = {}
+    for mpath in sorted(SOYUN.glob("*/manifest.json")):
+        rid = mpath.parent.name
+        if rid == current_run_id:
+            continue
+        try:
+            data = json.loads(mpath.read_text())
+        except Exception:
+            continue
+        gpus = sorted({ph.get("gpu") for ph in data.get("phases", []) if ph.get("gpu")})
+        if gpus:
+            out[rid] = gpus
+    return out
+
+
+def read_metrics(selector_metrics_path):
+    if not selector_metrics_path.is_file():
+        return {}
+    try:
+        full = json.loads(selector_metrics_path.read_text())
+    except Exception as exc:  # pragma: no cover - defensive
+        return {"_parse_error": repr(exc)}
+    return {k: full[k] for k in METRIC_KEYS if k in full}
+
+
+def _speedup_vs_baseline(baseline_run_id, current_gpu, this_phases):
+    b = {"baseline_run_id": baseline_run_id, "latency_speedup_mean": None}
+    bpath = SOYUN / baseline_run_id / "manifest.json"
+    if not bpath.is_file():
+        b["note"] = f"baseline run '{baseline_run_id}' not found under results/soyun/"
+        return b
+    try:
+        ballm = json.loads(bpath.read_text())
+    except Exception as exc:
+        b["note"] = f"baseline manifest unreadable: {exc!r}"
+        return b
+    bgpus = sorted({ph.get("gpu") for ph in ballm.get("phases", []) if ph.get("gpu")})
+    b["baseline_gpu"] = bgpus
+    if not bgpus or any(g != current_gpu for g in bgpus):
+        b["note"] = (
+            f"baseline ran on a different GPU/instance {bgpus} != current "
+            f"{current_gpu!r}; latency speedup not computable "
+            "(prior-instance runs are never valid latency baselines)"
+        )
+        return b
+    # note: baseline's own manifest["instance_changed"] only means some *other*
+    # run in results/soyun/ used a different GPU -- it does not disqualify this
+    # baseline, whose per-phase GPU strings were just checked against current_gpu.
+    bl = None
+    for ph in ballm.get("phases", []):
+        m = ph.get("result", {}).get("metrics", {})
+        if "inference_latency_mean_ms" in m:
+            bl = {"phase": ph.get("phase"),
+                  **{k: m.get(k) for k in _LAT}}
+    if bl is None:
+        b["note"] = f"baseline run '{baseline_run_id}' has no inference_latency metrics"
+        return b
+    b["baseline_phase"] = bl["phase"]
+    b["baseline_latency_ms"] = {k: bl[k] for k in _LAT}
+    rows = []
+    for ph in this_phases:
+        m = ph.get("metrics", {})
+        if "inference_latency_mean_ms" not in m:
+            continue
+        row = {"phase": ph.get("phase"),
+               "latency_ms": {k: m.get(k) for k in _LAT}}
+        for k in _LAT:
+            tag = k.replace("inference_latency_", "").replace("_ms", "")
+            cur, base = m.get(k), bl[k]
+            row[f"speedup_{tag}"] = (base / cur) if (cur and base) else None
+        rows.append(row)
+    b["per_phase"] = rows
+    if rows:
+        b["latency_speedup_mean"] = rows[-1]["speedup_mean"]
+    return b
+
+
+def write_summary(run_dir, current_gpu, baseline_run_id):
+    mpath = run_dir / "manifest.json"
+    allm = json.loads(mpath.read_text())
+    phases = []
+    for ph in allm.get("phases", []):
+        r = ph.get("result", {})
+        phases.append({
+            "phase": ph.get("phase"),
+            "utc": ph.get("utc"),
+            "status": r.get("status"),
+            "error": r.get("error"),
+            "wall_seconds": r.get("wall_seconds"),
+            "parsed": ph.get("parsed"),
+            "metrics": r.get("metrics", {}),
+        })
+    summary = {
+        "run_id": allm.get("run_id"),
+        "gpu": current_gpu,
+        "instance_changed": allm.get("instance_changed", False),
+        "prior_run_gpus": allm.get("prior_run_gpus", {}),
+        "phases": phases,
+        "baseline": (_speedup_vs_baseline(baseline_run_id, current_gpu, phases)
+                     if baseline_run_id else None),
+    }
+    (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
+    return summary
+
+
 class _Tee:
     def __init__(self, *streams):
         self.streams = streams
@@ -90,6 +241,9 @@ def main():
                     help="phase label -> results/soyun/<run-id>/<phase>/")
     ap.add_argument("--ckpt-name", required=True,
                     help="checkpoint dir name -> results/soyun/checkpoints/<name>/")
+    ap.add_argument("--baseline-run-id", default=None,
+                    help="results/soyun/<id> whose inference_latency is the speedup "
+                         "reference; only used if its GPU string matches this run's")
     args, passthrough = ap.parse_known_args()
     if passthrough and passthrough[0] == "--":
         passthrough = passthrough[1:]
@@ -176,10 +330,38 @@ def main():
         },
     }
 
+    # ---- cross-instance guard: compare GPU string against earlier soyun runs ----
+    cur_gpu = manifest["gpu"]
+    prior_gpus = prior_run_gpus(args.run_id)
+    foreign = sorted({g for gs in prior_gpus.values() for g in gs if g and g != cur_gpu})
+    manifest["current_gpu"] = cur_gpu
+    manifest["prior_run_gpus"] = prior_gpus
+    manifest["instance_changed"] = bool(foreign)
+    if foreign:
+        manifest["instance_change_note"] = (
+            f"this run GPU {cur_gpu!r} differs from earlier results/soyun runs "
+            f"{foreign}; inference_latency absolute values are NOT comparable across "
+            "instances -- only a same-GPU run may serve as a latency baseline."
+        )
+        print("\n[run_wrapped] !! INSTANCE CHANGED", file=sys.stderr)
+        print(f"[run_wrapped]    this run : {cur_gpu}", file=sys.stderr)
+        for rid, gs in prior_gpus.items():
+            if any(g != cur_gpu for g in gs):
+                print(f"[run_wrapped]    {rid} : {gs}", file=sys.stderr)
+        print("[run_wrapped]    -> manifest['instance_changed']=true; latency absolute "
+              "values not comparable to those runs.\n", file=sys.stderr)
+    if args.baseline_run_id and args.baseline_run_id in prior_gpus \
+            and any(g != cur_gpu for g in prior_gpus[args.baseline_run_id]):
+        print(f"[run_wrapped] !! --baseline-run-id {args.baseline_run_id} ran on "
+              f"{prior_gpus[args.baseline_run_id]} != this GPU; speedup will be null.",
+              file=sys.stderr)
+
     mpath = run_dir / "manifest.json"
     allm = (json.loads(mpath.read_text())
             if mpath.exists() else {"run_id": args.run_id, "phases": []})
     allm["phases"].append(manifest)
+    allm["instance_changed"] = bool(foreign) or bool(allm.get("instance_changed"))
+    allm["prior_run_gpus"] = prior_gpus
     mpath.write_text(json.dumps(allm, indent=2))
     (phase_dir / "manifest_phase.json").write_text(json.dumps(manifest, indent=2))
 
@@ -229,11 +411,14 @@ def main():
         if found:
             timing[key] = [round(float(x), 3) for x in found]
 
+    metrics = read_metrics(phase_dir / "selector_metrics.json")
+
     result = {
         "status": status,
         "error": err,
         "wall_seconds": round(wall, 2),
         "timing": timing,
+        "metrics": metrics,
         "collected_result_files": collected,
         "checkpoint_files": ckpt_files,
         "checkpoint_dir": str(ckpt_dir.relative_to(REPO)),
@@ -244,8 +429,19 @@ def main():
     allm["phases"][-1]["result"] = result
     mpath.write_text(json.dumps(allm, indent=2))
 
+    # ---- run-level summary (all phases so far) + optional baseline speedup ----
+    summary = write_summary(run_dir, cur_gpu, args.baseline_run_id)
+    bl = summary.get("baseline")
+    if bl:
+        sp = bl.get("latency_speedup_mean")
+        print(f"[run_wrapped] baseline={bl['baseline_run_id']} "
+              f"latency_speedup_mean={sp if sp is None else round(sp, 3)}"
+              + (f"  ({bl['note']})" if bl.get("note") else ""))
+
+    lat = metrics.get("inference_latency_mean_ms")
     print(f"[run_wrapped] phase={args.phase} status={status} wall={wall:.1f}s "
-          f"collected={collected}")
+          f"lat_mean_ms={None if lat is None else round(lat, 1)} "
+          f"instance_changed={manifest['instance_changed']} collected={collected}")
     if status != "ok":
         print(f"[run_wrapped] FAILURE: {err}")
         sys.exit(1)
