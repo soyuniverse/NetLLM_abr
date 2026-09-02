@@ -1,28 +1,42 @@
-# requirements-soyun.txt — extra packages soyun installed into .venv
+# requirements-soyun.txt — extra packages soyun installs into .venv
 # ---------------------------------------------------------------------------
 # Assumes:  python -m venv .venv --system-site-packages
 #   -> torch is INHERITED from the base conda env (/opt/conda), NOT pinned here.
+#      Pinning torch here would try to pull ~2.5 GB of CUDA wheels into the venv
+#      and shadow a working, driver-matched install.
 #   -> numpy is shadowed inside the venv (1.24.4) without touching base (1.26.3).
 #
-# Confirmed working base (2026-08-31, RTX 3090 instance, pre-replacement):
-#   python 3.10.13
-#   torch 2.2.0  (torch.version.cuda 12.1, cudnn 8902)
-#   NVIDIA driver 535.154.05
-#   NOTE: that GPU had a broken fp16 datapath (see docs/soyun/PLUMBING_SMOKE.md);
-#         the *software* stack below is fine — only the card was defective.
+# VERIFIED WORKING STACK (2026-09-02, the instance that produced BASELINE6,
+# SWEEP_SPEC and the drafter unit tests):
+#   python                3.10.13   (venv home = /opt/conda/bin,
+#                                    include-system-site-packages = true)
+#   torch                 2.2.0     torch.version.cuda 12.1, cudnn 8902
+#   GPU                   NVIDIA GeForce RTX 3090, 24576 MiB
+#   NVIDIA driver         595.58.03            <- fp16 datapath OK
+#   transformers 4.34.1 · peft 0.6.2 · numpy 1.24.4 · accelerate 0.23.0
+#
+# DRIVER WARNING: an earlier instance ran driver 535.154.05 on the same card
+# model and its fp16/bf16 datapath was broken (every cuda fp16 tensor came back
+# all-NaN, fp32 fine). The software stack below was identical and blameless.
+# ALWAYS run `.venv/bin/python abr_spec/gpu_fp16_diagnostic.py` on a new box
+# before trusting any result — see docs/soyun/PLUMBING_SMOKE.md section 3 and
+# docs/soyun/VASTAI_SETUP.md Step 1.
 #
 # Restore on a new server:
 #   cd <repo>
 #   python -m venv .venv --system-site-packages
 #   .venv/bin/pip install -U pip
 #   .venv/bin/pip install -r abr_spec/requirements-soyun.txt
-#   # pytest is used by the speculative unit tests; it is in the base env here,
-#   # if missing:  .venv/bin/pip install pytest
+#   .venv/bin/pip install pytest        # if the base env lacks it
+#   # ALWAYS invoke as .venv/bin/python (or `source .venv/bin/activate` first);
+#   # a bare `python` is the base conda env and has numpy 1.26, which the
+#   # NetLLM code path does not expect.
 #
 # This complements the repo-root requirements-inference.txt (same core pins);
 # the list below is the exact `pip freeze --local` of soyun's venv.
 # ---------------------------------------------------------------------------
 accelerate==0.23.0
+gdown==6.1.0
 huggingface-hub==0.17.3
 munch==4.0.0
 numpy==1.24.4
