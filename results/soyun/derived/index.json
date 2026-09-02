@@ -1,0 +1,42 @@
+{
+ "runs": {
+  "baseline6_20260902": {
+   "file": "baseline6_20260902_summary.json",
+   "phases": [
+    "e_speculative",
+    "f_all_three"
+   ],
+   "source_bytes": 10971671,
+   "source_lines": 9400,
+   "summary_bytes": 17232
+  },
+  "sweep_spec_20260902": {
+   "file": "sweep_spec_20260902_summary.json",
+   "phases": [
+    "s0_mode_sample",
+    "s1_k1",
+    "s2_k2",
+    "s2_k2_precheck",
+    "s3_k4",
+    "s4_k5",
+    "s5_buftol2",
+    "s6_buftol4",
+    "s7_buftol8",
+    "s8_statetol05"
+   ],
+   "source_bytes": 54831594,
+   "source_lines": 47000,
+   "summary_bytes": 84972
+  },
+  "trace_smoke_20260902": {
+   "file": "trace_smoke_20260902_summary.json",
+   "phases": [
+    "e_smoke"
+   ],
+   "source_bytes": 110162,
+   "source_lines": 94,
+   "summary_bytes": 7632
+  }
+ },
+ "schema_version": 2
+}
