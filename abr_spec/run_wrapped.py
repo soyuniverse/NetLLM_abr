@@ -261,6 +261,19 @@ def main():
                          "(abr_spec/decision_trace.py; upstream untouched). "
                          "Record-building happens outside the CUDA-synced "
                          "latency window, so the measured latency is unaffected.")
+    ap.add_argument("--speculative-drafter", default="mpc",
+                    choices=("mpc", "repeat-last", "hybrid"),
+                    help="which draft proposer run_plm.py should build. run_plm.py "
+                         "is not modifiable, so this wrapper flag is applied by "
+                         "abr_spec/drafter_select.py, which replaces the "
+                         "RobustMPCDraftGenerator.from_video_size_dir classmethod "
+                         "before run_plm.py executes. 'mpc' installs no patch.")
+    ap.add_argument("--speculative-hybrid-buffer-threshold", type=float, default=5.0,
+                    help="hybrid drafter: use MPC while buffer_size is below this "
+                         "many seconds (default 5.0, from BASELINE6)")
+    ap.add_argument("--speculative-hybrid-cv-threshold", type=float, default=0.30,
+                    help="hybrid drafter: use MPC when the throughput coefficient "
+                         "of variation is at least this (default 0.30, from BASELINE6)")
     ap.add_argument("--probe", default=None,
                     help="name of an abr_spec module exposing install(path); it is "
                          "imported and installed before run_plm.py executes "
@@ -304,6 +317,15 @@ def main():
         sys.path.insert(0, str(REPO / "abr_spec"))
         probe = __import__(args.probe)
         probe.install(str(phase_dir / f"{args.probe}.json"))
+
+    # ---- drafter selection (run_plm.py untouched; see drafter_select docstring) ----
+    sys.path.insert(0, str(REPO / "abr_spec"))
+    import drafter_select
+    drafter_info = drafter_select.install(
+        args.speculative_drafter,
+        buffer_threshold=args.speculative_hybrid_buffer_threshold,
+        cv_threshold=args.speculative_hybrid_cv_threshold,
+    )
 
     # ---- seed handling (best effort) ----
     seed = extract_flag(passthrough, "--seed")
@@ -356,6 +378,7 @@ def main():
         "gpu": gpu_name(),
         "decision_trace": (None if trace_path is None
                            else str(trace_path.relative_to(REPO))),
+        "drafter": drafter_info,
         "parsed": {
             "adapt": "--adapt" in passthrough,
             "test": "--test" in passthrough,
@@ -479,6 +502,7 @@ def main():
         "checkpoint_dir": str(ckpt_dir.relative_to(REPO)),
         "console_log": str(log_path.relative_to(REPO)),
         "decision_trace": decision_trace_info,
+        "drafter": drafter_info,
     }
     (phase_dir / "result.json").write_text(json.dumps(result, indent=2))
     allm = json.loads(mpath.read_text())
