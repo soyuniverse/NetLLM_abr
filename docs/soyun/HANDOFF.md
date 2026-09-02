@@ -9,6 +9,15 @@
 > lead: replace the drafter (predicted **1.31×**), which requires write access to
 > `plm_special/speculative/`.
 
+> **2026-09-02 update 2 — the parameter sweep is done and the verdict is in.**
+> [[SWEEP_SPEC]] (`results/soyun/sweep_spec_20260902/`, 9/9 ok). **No parameter
+> setting reaches parity**: max q 9.96 % against the 18.15 % that k=5 needs, best
+> model-consistent speedup 0.934x. BASELINE6's -3.13 % QoE was the *greedy*
+> verification mode, not speculation -- with `sample` the QoE is **+0.81 % above
+> A1**, so `sample` is the recommended default. Pluggable drafters are
+> implemented and unit-tested (`3964752`) but **not yet run**; that experiment
+> needs soyun's approval.
+
 **As of 2026-09-01, branch `soyun/spec-abr`.** Old instance replaced (GPU fp16
 defect). Everything needed is committed; follow the steps below on the new box.
 

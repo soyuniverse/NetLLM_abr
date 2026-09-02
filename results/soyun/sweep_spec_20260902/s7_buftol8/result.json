@@ -1,0 +1,63 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 260.83,
+  "timing": {
+    "wall_seconds": 260.83,
+    "test_on_env_time_s": [
+      258.029
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 54.7033406251873,
+    "inference_latency_p50_ms": 67.33670202083886,
+    "inference_latency_p95_ms": 68.41871591168456,
+    "target_plm_calls": 4388,
+    "llm_call_reduction_ratio": 0.06638297872340426,
+    "draft_attempts": 4154,
+    "drafted_actions": 12191,
+    "accepted_actions": 718,
+    "corrected_actions": 4079,
+    "acceptance_rate": 0.05889590681650398,
+    "executed_speculative_actions": 4466,
+    "queued_actions_served": 312,
+    "pending_actions": 0,
+    "fallback_calls": 234,
+    "state_mismatch_fallbacks": 234,
+    "buffer_mismatch_fallbacks": 43,
+    "feature_mismatch_fallbacks": 191,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9132248910524671,
+    "mean_reward": 0.9132248910524671,
+    "mean_bitrate_mbps": 0.9538617021276595,
+    "mean_rebuffer_s_per_chunk": 0.00011593330298883979,
+    "total_rebuffer_s": 0.544886524047547,
+    "mean_smoothness_mbps": 0.04013829787234042,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "greedy",
+    "speculative_buffer_tolerance": 8.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/sweep_spec_20260902/s7_buftol8/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/sweep_spec_20260902/s7_buftol8/console.log",
+  "decision_trace": {
+    "path": "results/soyun/sweep_spec_20260902/s7_buftol8/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "mpc",
+    "patched": false,
+    "buffer_threshold": null,
+    "cv_threshold": null
+  }
+}

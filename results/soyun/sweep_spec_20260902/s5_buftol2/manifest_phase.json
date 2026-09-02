@@ -1,0 +1,108 @@
+{
+  "run_id": "sweep_spec_20260902",
+  "phase": "s5_buftol2",
+  "utc": "2026-09-02T01:46:31.825765+00:00",
+  "git_commit": "39647525253c7cc8a86cf1a9f7ed20506a39a5e5",
+  "git_branch": "soyun/spec-abr",
+  "git_status_porcelain": "?? results/soyun/sweep_spec_20260902/",
+  "argv_expanded": [
+    "run_plm.py",
+    "--test",
+    "--fp16",
+    "--seed",
+    "1",
+    "--plm-type",
+    "llama",
+    "--plm-size",
+    "base",
+    "--rank",
+    "128",
+    "--plm-dir",
+    "../downloaded_plms/llama/base",
+    "--model-dir",
+    "../downloaded_plms/ft_plms/try_llama2_7b",
+    "--trace",
+    "fcc-test",
+    "--trace-num",
+    "100",
+    "--video",
+    "video1",
+    "--fixed-order",
+    "--device",
+    "cuda:0",
+    "--device-out",
+    "cuda:0",
+    "--temporal-selector",
+    "none",
+    "--token-selector",
+    "none",
+    "--speculative-draft-steps",
+    "3",
+    "--speculative-verification-mode",
+    "greedy",
+    "--speculative-buffer-tolerance",
+    "2.0"
+  ],
+  "seed": 1,
+  "determinism_notes": [
+    "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+    "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+    "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+  ],
+  "cfg_overrides": {
+    "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+    "results_dir": "/root/NetLLM_abr/results/soyun/sweep_spec_20260902/s5_buftol2/raw"
+  },
+  "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+  "python": "3.10.13",
+  "package_versions": {
+    "torch": "2.2.0",
+    "transformers": "4.34.1",
+    "peft": "0.6.2",
+    "numpy": "1.24.4",
+    "accelerate": "0.23.0"
+  },
+  "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03",
+  "decision_trace": "results/soyun/sweep_spec_20260902/s5_buftol2/decisions.jsonl",
+  "drafter": {
+    "drafter": "mpc",
+    "patched": false,
+    "buffer_threshold": null,
+    "cv_threshold": null
+  },
+  "parsed": {
+    "adapt": false,
+    "test": true,
+    "fixed_order": true,
+    "rank": "128",
+    "num_epochs": null,
+    "eval_per_epoch": null,
+    "trace": "fcc-test",
+    "trace_num": "100",
+    "video": "video1",
+    "speculative_draft_steps": "3",
+    "speculative_verification_mode": "greedy",
+    "temporal_selector": "none",
+    "token_selector": "none"
+  },
+  "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03",
+  "prior_run_gpus": {
+    "baseline6_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "smoke_ckpt_1ep_20260831": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+    ],
+    "smoke_spec_a_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "smoke_spec_b_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "trace_smoke_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ]
+  },
+  "instance_changed": true,
+  "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline."
+}

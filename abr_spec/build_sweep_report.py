@@ -187,7 +187,8 @@ def main():
              "s5_buftol2", "s6_buftol4", "s7_buftol8", "s8_statetol05"]
     present = [p.name for p in sorted(sweep_dir.iterdir()) if p.is_dir()] \
         if sweep_dir.is_dir() else []
-    for p in order + [x for x in present if x not in order and x != "logs"]:
+    NON_PHASE = {"logs", "analysis"}
+    for p in order + [x for x in present if x not in order and x not in NON_PHASE]:
         if (sweep_dir / p).is_dir():
             rows.append(phase_row(sweep_dir, p))
         else:
