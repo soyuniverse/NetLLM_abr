@@ -1,0 +1,8 @@
+구성,speedup vs A1 (mean),speedup p50,speedup p95,latency mean (ms),latency p50 (ms),latency p95 (ms),inference_calls,target_plm_calls,llm_call_reduction_ratio,acceptance_rate,drafted,accepted,corrected,queued_actions_served,fallback total,fallback: buffer,fallback: state,fallback: return,draft_generation_failures
+a1_all_off,1.000x,1.000x,1.000x,50.329,57.954,59.032,4700,4700,0.00000,0.00000,0,0,0,0,0,0,0,0,0
+b_temporal,1.750x,2.064x,1.769x,28.759,28.081,33.375,4700,4700,0.00000,0.00000,0,0,0,0,0,0,0,0,0
+c_recent_token,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a,n/a
+d_temporal_token,1.845x,2.099x,2.100x,27.279,27.611,28.108,4700,4700,0.00000,0.00000,0,0,0,0,0,0,0,0,0
+e_speculative,0.918x,0.861x,0.862x,54.815,67.297,68.445,4700,4405,0.06277,0.06142,12145,746,4054,295,268,236,32,0,0
+f_all_three,1.649x,1.713x,1.726x,30.527,33.823,34.196,4700,4408,0.06213,0.06247,12117,757,4041,292,284,258,26,0,0
+a2_all_off,0.998x,0.998x,0.999x,50.424,58.077,59.120,4700,4700,0.00000,0.00000,0,0,0,0,0,0,0,0,0

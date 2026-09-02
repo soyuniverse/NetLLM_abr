@@ -68,3 +68,62 @@ Format per entry:
 - **Status:** open, low priority — **not** the current blocker (that is a broken
   GPU fp16 datapath: infra, not code — see [[PLUMBING_SMOKE]] §3). Next thing to
   hit once a working fp16 GPU is available.
+
+---
+
+## 4. Condition C (`--token-selector recent-timestep`) makes Llama fp16 emit an all-NaN hidden state
+
+- **Date:** 2026-09-02
+- **File / area:** `adaptive_bitrate_streaming/plm_special/models/selectors.py`
+  (`RecentTimestepSelector`, ~L101-176) and/or
+  `plm_special/models/selection_layout.py::recent_timestep_window`.
+  **Not modified** — teammate-owned, read-only for soyun (AGENTS.md).
+- **Why it's needed:** it is one of the six README evaluation conditions
+  ("Recent-token only"). It is the **only** condition of the six that cannot
+  complete a `--trace-num 100` run, so the README matrix is 5/6.
+- **Repro (deterministic, hit twice at the identical point):**
+
+  ```bash
+  python abr_spec/run_wrapped.py --run-id baseline6_20260902 \
+    --phase c_recent_token_nanprobe --ckpt-name official_abr_r128 \
+    --probe nan_probe -- --test --fp16 --seed 1 \
+    --plm-type llama --plm-size base --rank 128 \
+    --plm-dir ../downloaded_plms/llama/base \
+    --model-dir ../downloaded_plms/ft_plms/try_llama2_7b \
+    --trace fcc-test --trace-num 100 --video video1 --fixed-order \
+    --device cuda:0 --device-out cuda:0 \
+    --temporal-selector none --token-selector recent-timestep \
+    --selector-history-steps 5 --speculative-draft-steps 0
+  ```
+
+  → `NonFiniteInferenceError: non-finite ABR inference tensor at plm_hidden:
+  {'shape': [1, 47, 4096], 'finite_elements': 0, 'total_elements': 192512,
+  'adalora_overflow_candidates': []}` at `rl_policy.py:299`, on PLM call
+  **2527 / 4700** (trace_idx 53, chunk 36). Wall 82.6 s and 83.1 s on the two runs.
+
+- **Detail (measured by `abr_spec/nan_probe.py`, output in
+  `results/soyun/baseline6_20260902/c_recent_token_nanprobe/nan_probe.json`):**
+  at the failing call the *inputs* are unremarkable — fp32 absmax **5.179**,
+  after the fp16 bridge **5.180**, `fp16_input_all_finite: true` (so
+  `_require_finite(plm_inputs, 'plm_inputs')` passes), attention mask dense
+  **47/47** with no all-zero row, context 47 tokens (5 history blocks × 8 +
+  current 7). The preceding calls' `last_hidden_state` absmax runs **50-70**,
+  far under fp16's 65504. The NaN is produced **inside** the frozen Llama-2-7B
+  fp16 forward, and it takes out every one of the 192,512 output elements
+  (single `inf` → attention softmax → whole sequence), not just the new tokens.
+  Conditions B (`event-aware`, 26.6 tokens mean) and D (`event-aware +
+  intra-timestep`, 19.5 tokens mean) complete all 4,700 decisions on the same
+  build, GPU and seed — the failure is specific to the window
+  `recent-timestep --selector-history-steps 5` retains.
+- **Proposed change (owner's call):** likely an activation-outlier / fp16 range
+  issue triggered by the retained window rather than a logic bug in the slice.
+  Candidates: (a) run the PLM in bf16 (RTX 3090 supports it; verified finite in
+  `abr_spec/gpu_fp16_diagnostic.py`) instead of fp16 for this path; (b) add the
+  same `_require_finite` guard *per Llama layer* so the offending layer is
+  identified; (c) re-check that `recent_timestep_window` cannot drop the
+  positional/anchor token the block structure assumes. soyun did not attempt any
+  of these — out of write scope.
+- **Owner to contact:** `plm_special/models/selectors.py` /
+  `selection_layout.py` author (Token selector module owner).
+- **Status:** open. **Blocks 1 of the 6 README conditions**; the other five are
+  measured in [[BASELINE6]].

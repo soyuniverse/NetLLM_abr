@@ -139,8 +139,11 @@ def read_metrics(selector_metrics_path):
     return {k: full[k] for k in METRIC_KEYS if k in full}
 
 
-def _speedup_vs_baseline(baseline_run_id, current_gpu, this_phases):
-    b = {"baseline_run_id": baseline_run_id, "latency_speedup_mean": None}
+def _speedup_vs_baseline(baseline_run_id, current_gpu, this_phases,
+                         baseline_phase=None):
+    b = {"baseline_run_id": baseline_run_id,
+         "baseline_phase_requested": baseline_phase,
+         "latency_speedup_mean": None}
     bpath = SOYUN / baseline_run_id / "manifest.json"
     if not bpath.is_file():
         b["note"] = f"baseline run '{baseline_run_id}' not found under results/soyun/"
@@ -162,14 +165,24 @@ def _speedup_vs_baseline(baseline_run_id, current_gpu, this_phases):
     # note: baseline's own manifest["instance_changed"] only means some *other*
     # run in results/soyun/ used a different GPU -- it does not disqualify this
     # baseline, whose per-phase GPU strings were just checked against current_gpu.
+    # Without --baseline-phase the *last* phase carrying latency metrics wins.
+    # When the baseline lives in the same run-id as the current phase that would
+    # silently resolve to the current phase itself (speedup == 1.0), so a
+    # multi-phase run must name its baseline phase explicitly.
     bl = None
     for ph in ballm.get("phases", []):
+        if baseline_phase is not None and ph.get("phase") != baseline_phase:
+            continue
         m = ph.get("result", {}).get("metrics", {})
         if "inference_latency_mean_ms" in m:
             bl = {"phase": ph.get("phase"),
                   **{k: m.get(k) for k in _LAT}}
     if bl is None:
-        b["note"] = f"baseline run '{baseline_run_id}' has no inference_latency metrics"
+        b["note"] = (
+            f"baseline run '{baseline_run_id}'"
+            + (f" phase '{baseline_phase}'" if baseline_phase else "")
+            + " has no inference_latency metrics"
+        )
         return b
     b["baseline_phase"] = bl["phase"]
     b["baseline_latency_ms"] = {k: bl[k] for k in _LAT}
@@ -191,7 +204,7 @@ def _speedup_vs_baseline(baseline_run_id, current_gpu, this_phases):
     return b
 
 
-def write_summary(run_dir, current_gpu, baseline_run_id):
+def write_summary(run_dir, current_gpu, baseline_run_id, baseline_phase=None):
     mpath = run_dir / "manifest.json"
     allm = json.loads(mpath.read_text())
     phases = []
@@ -212,7 +225,8 @@ def write_summary(run_dir, current_gpu, baseline_run_id):
         "instance_changed": allm.get("instance_changed", False),
         "prior_run_gpus": allm.get("prior_run_gpus", {}),
         "phases": phases,
-        "baseline": (_speedup_vs_baseline(baseline_run_id, current_gpu, phases)
+        "baseline": (_speedup_vs_baseline(baseline_run_id, current_gpu, phases,
+                                          baseline_phase)
                      if baseline_run_id else None),
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
@@ -241,9 +255,24 @@ def main():
                     help="phase label -> results/soyun/<run-id>/<phase>/")
     ap.add_argument("--ckpt-name", required=True,
                     help="checkpoint dir name -> results/soyun/checkpoints/<name>/")
+    ap.add_argument("--decision-trace", action="store_true",
+                    help="write one JSON line per ABR decision to "
+                         "results/soyun/<run-id>/<phase>/decisions.jsonl "
+                         "(abr_spec/decision_trace.py; upstream untouched). "
+                         "Record-building happens outside the CUDA-synced "
+                         "latency window, so the measured latency is unaffected.")
+    ap.add_argument("--probe", default=None,
+                    help="name of an abr_spec module exposing install(path); it is "
+                         "imported and installed before run_plm.py executes "
+                         "(e.g. --probe nan_probe). Diagnostics only.")
     ap.add_argument("--baseline-run-id", default=None,
                     help="results/soyun/<id> whose inference_latency is the speedup "
                          "reference; only used if its GPU string matches this run's")
+    ap.add_argument("--baseline-phase", default=None,
+                    help="phase inside --baseline-run-id to use as the latency "
+                         "reference. REQUIRED when the baseline phase lives in the "
+                         "same run-id as this phase, otherwise the reference "
+                         "resolves to the current phase itself (speedup 1.0).")
     args, passthrough = ap.parse_known_args()
     if passthrough and passthrough[0] == "--":
         passthrough = passthrough[1:]
@@ -263,6 +292,18 @@ def main():
     import config  # adaptive_bitrate_streaming/config.py
     config.cfg.plm_ft_dir = str(ckpt_dir)
     config.cfg.results_dir = str(raw_dir)
+
+    # ---- optional per-decision JSONL trace (soyun-owned, monkeypatch only) ----
+    trace_path = None
+    if args.decision_trace:
+        sys.path.insert(0, str(REPO / "abr_spec"))
+        import decision_trace
+        trace_path = phase_dir / "decisions.jsonl"
+        decision_trace.install(str(trace_path))
+    if args.probe:
+        sys.path.insert(0, str(REPO / "abr_spec"))
+        probe = __import__(args.probe)
+        probe.install(str(phase_dir / f"{args.probe}.json"))
 
     # ---- seed handling (best effort) ----
     seed = extract_flag(passthrough, "--seed")
@@ -313,6 +354,8 @@ def main():
         "python": sys.version.split()[0],
         "package_versions": pkg_versions(),
         "gpu": gpu_name(),
+        "decision_trace": (None if trace_path is None
+                           else str(trace_path.relative_to(REPO))),
         "parsed": {
             "adapt": "--adapt" in passthrough,
             "test": "--test" in passthrough,
@@ -413,6 +456,18 @@ def main():
 
     metrics = read_metrics(phase_dir / "selector_metrics.json")
 
+    decision_trace_info = None
+    if trace_path is not None:
+        try:
+            import decision_trace as _dt
+            _dt._S.fh.flush()
+            n = sum(1 for _ in open(trace_path))
+        except Exception as exc:  # pragma: no cover - defensive
+            n = f"<error: {exc!r}>"
+        decision_trace_info = {"path": str(trace_path.relative_to(REPO)),
+                               "records": n}
+        print(f"[run_wrapped] decision_trace records={n} -> {trace_path}")
+
     result = {
         "status": status,
         "error": err,
@@ -423,6 +478,7 @@ def main():
         "checkpoint_files": ckpt_files,
         "checkpoint_dir": str(ckpt_dir.relative_to(REPO)),
         "console_log": str(log_path.relative_to(REPO)),
+        "decision_trace": decision_trace_info,
     }
     (phase_dir / "result.json").write_text(json.dumps(result, indent=2))
     allm = json.loads(mpath.read_text())
@@ -430,7 +486,8 @@ def main():
     mpath.write_text(json.dumps(allm, indent=2))
 
     # ---- run-level summary (all phases so far) + optional baseline speedup ----
-    summary = write_summary(run_dir, cur_gpu, args.baseline_run_id)
+    summary = write_summary(run_dir, cur_gpu, args.baseline_run_id,
+                            args.baseline_phase)
     bl = summary.get("baseline")
     if bl:
         sp = bl.get("latency_speedup_mean")

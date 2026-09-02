@@ -1,0 +1,14 @@
+{
+  "status": "error",
+  "error": "NonFiniteInferenceError(\"non-finite ABR inference tensor at plm_hidden: {'stage': 'plm_hidden', 'dtype': 'torch.float32', 'shape': [1, 47, 4096], 'finite_elements': 0, 'total_elements': 192512, 'finite_absmax': None, 'adalora_overflow_candidates': []}\")",
+  "wall_seconds": 83.06,
+  "timing": {
+    "wall_seconds": 83.06
+  },
+  "metrics": {},
+  "collected_result_files": [],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/baseline6_20260902/c_recent_token_nanprobe/console.log",
+  "decision_trace": null
+}

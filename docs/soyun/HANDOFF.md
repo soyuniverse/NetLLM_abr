@@ -1,5 +1,14 @@
 # HANDOFF — resume point (soyun / speculative inference)
 
+> **2026-09-02 update — the 6-condition matrix has been run.** See
+> [[BASELINE6]] (`results/soyun/baseline6_20260902/`). 5 of 6 conditions
+> completed; `recent-timestep` aborts with an fp16 all-NaN PLM hidden state
+> ([[NEEDS_UPSTREAM]] #4). Speculative is **0.918×** on the official checkpoint
+> and the per-decision trace shows the cost is the longer verification context
+> (+16.8 %), not the MPC rollout (0.26 % of latency). Next decision for the team
+> lead: replace the drafter (predicted **1.31×**), which requires write access to
+> `plm_special/speculative/`.
+
 **As of 2026-09-01, branch `soyun/spec-abr`.** Old instance replaced (GPU fp16
 defect). Everything needed is committed; follow the steps below on the new box.
 

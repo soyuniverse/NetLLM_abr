@@ -1,0 +1,57 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 147.14,
+  "timing": {
+    "wall_seconds": 147.14,
+    "test_on_env_time_s": [
+      144.365
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 30.527413844234964,
+    "inference_latency_p50_ms": 33.82295899791643,
+    "inference_latency_p95_ms": 34.19551895931363,
+    "target_plm_calls": 4408,
+    "llm_call_reduction_ratio": 0.062127659574468086,
+    "draft_attempts": 4124,
+    "drafted_actions": 12117,
+    "accepted_actions": 757,
+    "corrected_actions": 4041,
+    "acceptance_rate": 0.062474209787901296,
+    "executed_speculative_actions": 4416,
+    "queued_actions_served": 292,
+    "pending_actions": 0,
+    "fallback_calls": 284,
+    "state_mismatch_fallbacks": 284,
+    "buffer_mismatch_fallbacks": 258,
+    "feature_mismatch_fallbacks": 26,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9111019842534596,
+    "mean_reward": 0.9111019842534596,
+    "mean_bitrate_mbps": 0.9567765957446808,
+    "mean_rebuffer_s_per_chunk": 0.0004686132611944452,
+    "total_rebuffer_s": 2.2024823276138923,
+    "mean_smoothness_mbps": 0.04365957446808511,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.7709164137358242,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "greedy",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/baseline6_20260902/f_all_three/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/baseline6_20260902/f_all_three/console.log",
+  "decision_trace": {
+    "path": "results/soyun/baseline6_20260902/f_all_three/decisions.jsonl",
+    "records": 4700
+  }
+}
