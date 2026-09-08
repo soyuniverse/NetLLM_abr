@@ -1,11 +1,18 @@
 # HANDOFF — read this file first
 
-**soyun / speculative inference · branch `soyun/spec-abr` · last updated 2026-09-02**
+**soyun / speculative inference · branch `soyun/spec-abr` · last updated 2026-09-08**
 
 If you are a new instance or a resumed session: **this file alone should restore
-the context.** Everything referenced here is committed. The previous instance was
-released on 2026-09-02 after the parameter sweep; the drafter ablation is written,
-dry-run verified, and **not yet executed** — that is the next job.
+the context.** Everything referenced here is committed.
+
+**2026-09-08: the drafter ablation is DONE.** `repeat-last` / `hybrid` drafters
+clear speedup 1.0× and 1.24× (the lines the parameter sweep could not reach) —
+repeat-last k3 = **1.419×** at q 37.8 %, draft/LLM 1-step agreement **88 %** (mpc
+13 %). Verdict is **conditional**: rebuffering rises 2.9–5.8× A1. Full writeup
+[[DRAFTER_ABLATION]], cost-model update [[SWEEP_SPEC]] §12. Freeze commit
+`0d137ce`, results `results/soyun/drafter_ab_20260908/`. Next: the safety
+follow-ups in DRAFTER_ABLATION §S.7 (need `plm_special/speculative/` + rl_policy
+changes → team-lead approval), and [[NEEDS_UPSTREAM]] #5 (raise the k cap for k=8).
 
 ---
 
@@ -30,10 +37,15 @@ dry-run verified, and **not yet executed** — that is the next job.
    failures rather than fixing them (buffer fallbacks 236→43 while state
    fallbacks 32→191, total ~unchanged). BASELINE6's −3.13 % QoE turned out to be
    the **greedy** verification mode, not speculation (with `sample`: **+0.81 %**).
-5. **Drafter replacement is implemented, unit-tested, and unrun.** `mpc` /
-   `repeat-last` / `hybrid` behind `--speculative-drafter` (commit `3964752`,
-   40 tests pass). Post-hoc estimate for repeat-last: `q ≈ 35 %` → **~1.31×**.
-   `abr_spec/run_drafter_ablation.sh` is dry-run verified. **Run it.**
+5. **Drafter replacement — RUN 2026-09-08 ([[DRAFTER_ABLATION]]).** `mpc` /
+   `repeat-last` / `hybrid` behind `--speculative-drafter`. On a new instance
+   (driver 570, own A1 = 80.627 ms): repeat-last k3 **1.419×** (q 37.8 %),
+   hybrid k3 1.413×, k5 pair 1.31–1.33×, M6 (repeat-last + Temporal/Token
+   selectors) **2.102×**. mpc still < 1.0×. The post-hoc `q ≈ 35 %` estimate
+   held (measured 37.8 %). **Conditional success**: rebuffering rises to
+   18–37 s (A1 6.4 s); the queue-serve safety metric's incidence gate passes
+   but the total-rebuffer gate fails (DRAFTER_ABLATION §S). k=8 blocked by the
+   read-only `run_plm.py:298` cap ([[NEEDS_UPSTREAM]] #5); ablation ran k∈{3,5}.
 
 Why a different drafter should work, in one line: MPC's proposal matches the
 LoRA policy's own next action **12.84 %** of the time; "repeat the last action"
@@ -106,74 +118,27 @@ by git**, so run `bash abr_spec/hooks/install.sh` immediately after cloning.
 
 ## 3. Next actions, in order
 
-### Action 0 — bring up the instance (~25 min, mostly download)
+### Actions 0–3 — DONE 2026-09-08 ([[DRAFTER_ABLATION]])
 
-Follow [[VASTAI_SETUP]] end to end. It is ordered so the fp16 check happens
-**before** the 13 GB download, and it lists the hosts to avoid.
+Instance bring-up, the 6-phase ablation, analysis + writeup, and M6 are all
+complete. Freeze `0d137ce`. `m1a_mpc_k3_sample` reproduced `s0` exactly
+(QoE 0.956366 / q 0.073617 / acceptance 0.079084). `run_wrapped.py` refused a
+speedup against the old-instance A1, so a fresh `drafter_ab_20260908/a1_all_off`
+(80.627 ms) is this campaign's reference; `d_temporal_token` is the selector-only
+reference. Two frozen-path issues were found and fixed *before* the freeze
+(DRAFTER_ABLATION §0): `decision_trace.py` did not instrument repeat-last/hybrid,
+and k=8 is impossible without editing read-only `run_plm.py`.
 
-### Action 1 — run the drafter ablation (~21.5 min GPU, ~$0.08) ← **the job**
+### Action 4 — safety follow-ups + upstream (no GPU / needs approval)
 
-Execution path is frozen at commit `3964752`; do not edit
-`plm_special/speculative/`, `run_wrapped.py`, `decision_trace.py` or
-`drafter_select.py` until this finishes (SWEEP_SPEC §2 shows what a mid-run code
-change costs in audit work).
-
-```bash
-cd /root/NetLLM_abr
-bash abr_spec/run_drafter_ablation.sh --dry-run      # sanity: "0 uncommitted change(s)"
-tmux new -s drafterab -d
-tmux send-keys -t drafterab 'bash abr_spec/run_drafter_ablation.sh' C-m
-```
-
-Six runs: `m1a_mpc_k3_sample` (control, must reproduce s0 exactly) ·
-`m1b_mpc_k3_greedy` · `m2_repeat_k3` · `m3_hybrid_k3` · `m4_repeat_k5` ·
-`m5_hybrid_k5`. Resumable (`result.json` status ok ⇒ skipped), continues past a
-failure, `--decision-trace` on every run.
-
-**First thing to check when it finishes:** `m1a_mpc_k3_sample` must land on
-s0's QoE **0.95637**, `q` **7.36 %**, acceptance **7.91 %**. Anything else means
-the freeze was broken or the instance differs — investigate before believing M2–M5.
-
-### Action 2 — analyse and write it up (~20 min, CPU only)
-
-```bash
-python abr_spec/build_sweep_report.py \
-  --sweep-dir results/soyun/drafter_ab_<date> \
-  --baseline-dir results/soyun/baseline6_20260902 \
-  --out-dir results/soyun/drafter_ab_<date>/analysis
-python abr_spec/derive_decision_summary.py            # preserve the new jsonl
-for p in m1a_mpc_k3_sample m2_repeat_k3 m3_hybrid_k3 m4_repeat_k5 m5_hybrid_k5; do
-  python abr_spec/analyze_decisions.py \
-    results/soyun/drafter_ab_<date>/$p/decisions.jsonl \
-    --out-dir results/soyun/drafter_ab_<date>/analysis --label $p
-  python abr_spec/breakeven.py \
-    results/soyun/drafter_ab_<date>/$p/decisions.jsonl \
-    --baseline-latency-ms 50.329 \
-    --out-dir results/soyun/drafter_ab_<date>/analysis --label $p
-done
-```
-Write `docs/soyun/DRAFTER_AB.md` against the same yardsticks: A1 = 1.000×,
-break-even `q` 14.73 %, 1.24× `q` 31.51 %, and the QoE decomposition
-`QoE = bitrate − 4.3·rebuffer − smoothness`. Also report, from
-`decisions.jsonl`, what fraction of **hybrid**'s decisions actually paid for an
-MPC rollout (`mpc_rollout_cpu_ms` non-null) — that is the whole point of M3/M5.
-
-### Action 3 — M6: best drafter + selectors (~2 min GPU)
-
-Only once M2–M5 name a winner. Suggested rule: **highest speedup among settings
-whose QoE is within 1 % of A1** (0.94872) — confirm with soyun before applying.
-
-```bash
-BEST_DRAFTER=repeat-last BEST_K=5 RUNS="m6_best_plus_selectors" \
-  bash abr_spec/run_drafter_ablation.sh
-```
-Compare against BASELINE6's F (1.649×) and D (1.845×): the question is whether a
-working drafter adds anything **on top of** the selectors, or whether the
-selectors already took the available win.
-
-### Action 4 — escalate the open upstream items (no GPU)
-
-See §5. #4 blocks one of the six README conditions and is not soyun's to fix.
+- **DRAFTER_ABLATION §S.7** — the conditional-success verdict needs: execution-time
+  buffer recheck on queue entries, no queue-serve below 5 s buffer, buffer
+  tolerance re-tune. All touch `plm_special/speculative/` + `rl_policy` →
+  team-lead approval, then a fresh ablation.
+- **[[NEEDS_UPSTREAM]] #5** — raise the `run_plm.py:298` draft-steps cap so k=8
+  (the zero-search-drafter regime) can be measured.
+- **[[NEEDS_UPSTREAM]] #4** — `recent-timestep` fp16 NaN still blocks 1 of the 6
+  README conditions; not soyun's to fix.
 
 ### Not planned unless asked
 
@@ -190,16 +155,19 @@ timing).
 | Path | What |
 |---|---|
 | `abr_spec/run_wrapped.py` | runs `run_plm.py` in-process with redirected output roots; flags `--decision-trace`, `--probe`, `--baseline-phase`, `--speculative-drafter`, `--speculative-hybrid-*`; cross-instance GPU guard; writes `manifest.json` / `summary.json` |
-| `abr_spec/decision_trace.py` | one JSON line per ABR decision (monkeypatch; record assembly is outside the CUDA-synced timing window) |
+| `abr_spec/decision_trace.py` | one JSON line per ABR decision (monkeypatch; outside the CUDA-synced window). Patches `BaseDraftGenerator` since `0d137ce` so repeat-last/hybrid are instrumented too; records `drafter_class` + hybrid `draft_route` |
 | `abr_spec/drafter_select.py` | redirects `run_plm.py`'s single drafter construction site without editing it; `mpc` installs no patch |
 | `abr_spec/analyze_decisions.py` | post-hoc rates, buffer/CV cross-tabs, latency attribution |
-| `abr_spec/breakeven.py` | required `q` for parity / 1.24×, drafter what-if scenarios |
-| `abr_spec/build_sweep_report.py` | the campaign table (CSV + markdown) |
+| `abr_spec/breakeven.py` | required `q` for parity / 1.24×, drafter what-if scenarios; empty-verify / no-serve guarded since `0d137ce` |
+| `abr_spec/queue_safety.py` | queue-serve window rebuffering — DRAFTER_ABLATION's safety gate (A direct / B lagged / C incidence × buffer band) |
+| `abr_spec/build_sweep_report.py` | the parameter-sweep table (s0..s8 phase names only) |
+| `abr_spec/build_drafter_ablation_report.py` | the drafter-ablation table (m-phase names; speedup vs the run's own a1_all_off) |
+| `abr_spec/make_figures.py` | the four DRAFTER_ABLATION paper figures (PNG 300 dpi + PDF, gitignored; captions in `results/soyun/figures/README.md`) |
 | `abr_spec/derive_decision_summary.py` | distils gitignored `decisions.jsonl` into tracked `results/soyun/derived/` |
 | `abr_spec/nan_probe.py` | locates the decision where a PLM forward goes non-finite |
 | `abr_spec/validate_ckpt.py`, `gpu_fp16_diagnostic.py` | the two pre-flight gates |
-| `abr_spec/run_baseline6.sh`, `run_sweep_spec.sh`, `run_drafter_ablation.sh` | the three campaigns |
-| `abr_spec/tests/test_drafters.py` | 29 tests incl. a 60-case tolerance-0 regression battery vs the frozen pre-refactor generator |
+| `abr_spec/run_baseline6.sh`, `run_sweep_spec.sh`, `run_drafter_ablation.sh`, `run_determinism_check.sh` | the campaigns + the Task 0.2 determinism gate |
+| `abr_spec/tests/test_drafters.py` | tests incl. a 60-case tolerance-0 regression battery vs the frozen pre-refactor generator (full suite → **40 passed**) |
 | `results/soyun/derived/` | **the surviving record of every `decisions.jsonl`** — 65.9 MB of raw traces distilled to 107 KB, tracked. Raw `.jsonl` died with the old instance. |
 
 Run `CUDA_VISIBLE_DEVICES="" .venv/bin/python -m pytest \
