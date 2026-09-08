@@ -1,0 +1,64 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 274.53,
+  "timing": {
+    "wall_seconds": 274.53,
+    "test_on_env_time_s": [
+      270.082
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 57.045690116145586,
+    "inference_latency_p50_ms": 63.61684401053935,
+    "inference_latency_p95_ms": 108.17787884152494,
+    "target_plm_calls": 2948,
+    "llm_call_reduction_ratio": 0.3727659574468085,
+    "draft_attempts": 2101,
+    "drafted_actions": 6163,
+    "accepted_actions": 4500,
+    "corrected_actions": 754,
+    "acceptance_rate": 0.7301638812266753,
+    "executed_speculative_actions": 3853,
+    "queued_actions_served": 1752,
+    "pending_actions": 0,
+    "fallback_calls": 847,
+    "state_mismatch_fallbacks": 847,
+    "buffer_mismatch_fallbacks": 686,
+    "feature_mismatch_fallbacks": 161,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9319083888825298,
+    "mean_reward": 0.9319083888825298,
+    "mean_bitrate_mbps": 1.0219468085106382,
+    "mean_rebuffer_s_per_chunk": 0.0057165053068832196,
+    "total_rebuffer_s": 26.867574942351133,
+    "mean_smoothness_mbps": 0.06545744680851065,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/drafter_ab_20260908/m3_hybrid_k3/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/drafter_ab_20260908/m3_hybrid_k3/console.log",
+  "decision_trace": {
+    "path": "results/soyun/drafter_ab_20260908/m3_hybrid_k3/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "hybrid",
+    "patched": true,
+    "buffer_threshold": 5.0,
+    "cv_threshold": 0.3,
+    "class": "HybridDraftGenerator"
+  }
+}

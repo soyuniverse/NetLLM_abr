@@ -1,0 +1,1102 @@
+{
+  "run_id": "determinism_20260908",
+  "phases": [
+    {
+      "run_id": "determinism_20260908",
+      "phase": "det_mpc_a",
+      "utc": "2026-09-08T13:23:20.480812+00:00",
+      "git_commit": "0d137ce5d03359bb2ba89621c696218ed402c5bb",
+      "git_branch": "soyun/spec-abr",
+      "git_status_porcelain": "?? docs/soyun/DRAFTER_ABLATION.md",
+      "argv_expanded": [
+        "run_plm.py",
+        "--test",
+        "--fp16",
+        "--seed",
+        "1",
+        "--plm-type",
+        "llama",
+        "--plm-size",
+        "base",
+        "--rank",
+        "128",
+        "--plm-dir",
+        "../downloaded_plms/llama/base",
+        "--model-dir",
+        "../downloaded_plms/ft_plms/try_llama2_7b",
+        "--trace",
+        "fcc-test",
+        "--trace-num",
+        "5",
+        "--video",
+        "video1",
+        "--fixed-order",
+        "--device",
+        "cuda:0",
+        "--device-out",
+        "cuda:0",
+        "--temporal-selector",
+        "none",
+        "--token-selector",
+        "none",
+        "--speculative-draft-steps",
+        "3",
+        "--speculative-verification-mode",
+        "sample",
+        "--speculative-buffer-tolerance",
+        "1.0",
+        "--speculative-state-tolerance",
+        "0.25",
+        "--speculative-return-tolerance",
+        "0.01"
+      ],
+      "seed": 1,
+      "determinism_notes": [
+        "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+        "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+        "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+      ],
+      "cfg_overrides": {
+        "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+        "results_dir": "/root/NetLLM_abr/results/soyun/determinism_20260908/det_mpc_a/raw"
+      },
+      "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+      "python": "3.10.13",
+      "package_versions": {
+        "torch": "2.2.0",
+        "transformers": "4.34.1",
+        "peft": "0.6.2",
+        "numpy": "1.24.4",
+        "accelerate": "0.23.0"
+      },
+      "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "decision_trace": "results/soyun/determinism_20260908/det_mpc_a/decisions.jsonl",
+      "drafter": {
+        "drafter": "mpc",
+        "patched": false,
+        "buffer_threshold": null,
+        "cv_threshold": null
+      },
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "5",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "prior_run_gpus": {
+        "baseline6_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_ckpt_1ep_20260831": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+        ],
+        "smoke_spec_a_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_spec_b_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "sweep_spec_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "trace_smoke_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ]
+      },
+      "instance_changed": true,
+      "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline.",
+      "result": {
+        "status": "ok",
+        "error": null,
+        "wall_seconds": 21.63,
+        "timing": {
+          "wall_seconds": 21.63,
+          "test_on_env_time_s": [
+            17.146
+          ]
+        },
+        "metrics": {
+          "inference_calls": 235,
+          "inference_latency_mean_ms": 72.50757378506216,
+          "inference_latency_p50_ms": 78.59845692291856,
+          "inference_latency_p95_ms": 84.285591437947,
+          "target_plm_calls": 225,
+          "llm_call_reduction_ratio": 0.04255319148936165,
+          "draft_attempts": 202,
+          "drafted_actions": 594,
+          "accepted_actions": 47,
+          "corrected_actions": 198,
+          "acceptance_rate": 0.07912457912457913,
+          "executed_speculative_actions": 212,
+          "queued_actions_served": 10,
+          "pending_actions": 0,
+          "fallback_calls": 23,
+          "state_mismatch_fallbacks": 23,
+          "buffer_mismatch_fallbacks": 21,
+          "feature_mismatch_fallbacks": 2,
+          "return_mismatch_fallbacks": 0,
+          "draft_generation_failures": 0,
+          "throughput_predictor_updates": 235,
+          "qoe_raw_mean": 1.18468085106383,
+          "mean_reward": 1.18468085106383,
+          "mean_bitrate_mbps": 1.267872340425532,
+          "mean_rebuffer_s_per_chunk": 0.0,
+          "total_rebuffer_s": 0.0,
+          "mean_smoothness_mbps": 0.08319148936170213,
+          "evaluated_video_chunks": 235,
+          "token_reduction_ratio": 0.0,
+          "speculative_draft_steps": 3,
+          "speculative_verification_mode": "sample",
+          "speculative_buffer_tolerance": 1.0,
+          "speculative_state_tolerance": 0.25,
+          "speculative_return_tolerance": 0.01
+        },
+        "collected_result_files": [
+          "results/soyun/determinism_20260908/det_mpc_a/selector_metrics.json"
+        ],
+        "checkpoint_files": [],
+        "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+        "console_log": "results/soyun/determinism_20260908/det_mpc_a/console.log",
+        "decision_trace": {
+          "path": "results/soyun/determinism_20260908/det_mpc_a/decisions.jsonl",
+          "records": 235
+        },
+        "drafter": {
+          "drafter": "mpc",
+          "patched": false,
+          "buffer_threshold": null,
+          "cv_threshold": null
+        }
+      }
+    },
+    {
+      "run_id": "determinism_20260908",
+      "phase": "det_mpc_b",
+      "utc": "2026-09-08T13:23:45.382899+00:00",
+      "git_commit": "0d137ce5d03359bb2ba89621c696218ed402c5bb",
+      "git_branch": "soyun/spec-abr",
+      "git_status_porcelain": "?? docs/soyun/DRAFTER_ABLATION.md\n?? results/soyun/determinism_20260908/",
+      "argv_expanded": [
+        "run_plm.py",
+        "--test",
+        "--fp16",
+        "--seed",
+        "1",
+        "--plm-type",
+        "llama",
+        "--plm-size",
+        "base",
+        "--rank",
+        "128",
+        "--plm-dir",
+        "../downloaded_plms/llama/base",
+        "--model-dir",
+        "../downloaded_plms/ft_plms/try_llama2_7b",
+        "--trace",
+        "fcc-test",
+        "--trace-num",
+        "5",
+        "--video",
+        "video1",
+        "--fixed-order",
+        "--device",
+        "cuda:0",
+        "--device-out",
+        "cuda:0",
+        "--temporal-selector",
+        "none",
+        "--token-selector",
+        "none",
+        "--speculative-draft-steps",
+        "3",
+        "--speculative-verification-mode",
+        "sample",
+        "--speculative-buffer-tolerance",
+        "1.0",
+        "--speculative-state-tolerance",
+        "0.25",
+        "--speculative-return-tolerance",
+        "0.01"
+      ],
+      "seed": 1,
+      "determinism_notes": [
+        "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+        "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+        "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+      ],
+      "cfg_overrides": {
+        "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+        "results_dir": "/root/NetLLM_abr/results/soyun/determinism_20260908/det_mpc_b/raw"
+      },
+      "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+      "python": "3.10.13",
+      "package_versions": {
+        "torch": "2.2.0",
+        "transformers": "4.34.1",
+        "peft": "0.6.2",
+        "numpy": "1.24.4",
+        "accelerate": "0.23.0"
+      },
+      "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "decision_trace": "results/soyun/determinism_20260908/det_mpc_b/decisions.jsonl",
+      "drafter": {
+        "drafter": "mpc",
+        "patched": false,
+        "buffer_threshold": null,
+        "cv_threshold": null
+      },
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "5",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "prior_run_gpus": {
+        "baseline6_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_ckpt_1ep_20260831": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+        ],
+        "smoke_spec_a_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_spec_b_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "sweep_spec_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "trace_smoke_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ]
+      },
+      "instance_changed": true,
+      "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline.",
+      "result": {
+        "status": "ok",
+        "error": null,
+        "wall_seconds": 21.7,
+        "timing": {
+          "wall_seconds": 21.7,
+          "test_on_env_time_s": [
+            17.344
+          ]
+        },
+        "metrics": {
+          "inference_calls": 235,
+          "inference_latency_mean_ms": 73.3606502245319,
+          "inference_latency_p50_ms": 80.6230140151456,
+          "inference_latency_p95_ms": 85.40950791211799,
+          "target_plm_calls": 225,
+          "llm_call_reduction_ratio": 0.04255319148936165,
+          "draft_attempts": 202,
+          "drafted_actions": 594,
+          "accepted_actions": 47,
+          "corrected_actions": 198,
+          "acceptance_rate": 0.07912457912457913,
+          "executed_speculative_actions": 212,
+          "queued_actions_served": 10,
+          "pending_actions": 0,
+          "fallback_calls": 23,
+          "state_mismatch_fallbacks": 23,
+          "buffer_mismatch_fallbacks": 21,
+          "feature_mismatch_fallbacks": 2,
+          "return_mismatch_fallbacks": 0,
+          "draft_generation_failures": 0,
+          "throughput_predictor_updates": 235,
+          "qoe_raw_mean": 1.18468085106383,
+          "mean_reward": 1.18468085106383,
+          "mean_bitrate_mbps": 1.267872340425532,
+          "mean_rebuffer_s_per_chunk": 0.0,
+          "total_rebuffer_s": 0.0,
+          "mean_smoothness_mbps": 0.08319148936170213,
+          "evaluated_video_chunks": 235,
+          "token_reduction_ratio": 0.0,
+          "speculative_draft_steps": 3,
+          "speculative_verification_mode": "sample",
+          "speculative_buffer_tolerance": 1.0,
+          "speculative_state_tolerance": 0.25,
+          "speculative_return_tolerance": 0.01
+        },
+        "collected_result_files": [
+          "results/soyun/determinism_20260908/det_mpc_b/selector_metrics.json"
+        ],
+        "checkpoint_files": [],
+        "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+        "console_log": "results/soyun/determinism_20260908/det_mpc_b/console.log",
+        "decision_trace": {
+          "path": "results/soyun/determinism_20260908/det_mpc_b/decisions.jsonl",
+          "records": 235
+        },
+        "drafter": {
+          "drafter": "mpc",
+          "patched": false,
+          "buffer_threshold": null,
+          "cv_threshold": null
+        }
+      }
+    },
+    {
+      "run_id": "determinism_20260908",
+      "phase": "det_repeat_a",
+      "utc": "2026-09-08T13:24:10.268038+00:00",
+      "git_commit": "0d137ce5d03359bb2ba89621c696218ed402c5bb",
+      "git_branch": "soyun/spec-abr",
+      "git_status_porcelain": "?? docs/soyun/DRAFTER_ABLATION.md\n?? results/soyun/determinism_20260908/",
+      "argv_expanded": [
+        "run_plm.py",
+        "--test",
+        "--fp16",
+        "--seed",
+        "1",
+        "--plm-type",
+        "llama",
+        "--plm-size",
+        "base",
+        "--rank",
+        "128",
+        "--plm-dir",
+        "../downloaded_plms/llama/base",
+        "--model-dir",
+        "../downloaded_plms/ft_plms/try_llama2_7b",
+        "--trace",
+        "fcc-test",
+        "--trace-num",
+        "5",
+        "--video",
+        "video1",
+        "--fixed-order",
+        "--device",
+        "cuda:0",
+        "--device-out",
+        "cuda:0",
+        "--temporal-selector",
+        "none",
+        "--token-selector",
+        "none",
+        "--speculative-draft-steps",
+        "3",
+        "--speculative-verification-mode",
+        "sample",
+        "--speculative-buffer-tolerance",
+        "1.0",
+        "--speculative-state-tolerance",
+        "0.25",
+        "--speculative-return-tolerance",
+        "0.01"
+      ],
+      "seed": 1,
+      "determinism_notes": [
+        "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+        "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+        "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+      ],
+      "cfg_overrides": {
+        "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+        "results_dir": "/root/NetLLM_abr/results/soyun/determinism_20260908/det_repeat_a/raw"
+      },
+      "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+      "python": "3.10.13",
+      "package_versions": {
+        "torch": "2.2.0",
+        "transformers": "4.34.1",
+        "peft": "0.6.2",
+        "numpy": "1.24.4",
+        "accelerate": "0.23.0"
+      },
+      "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "decision_trace": "results/soyun/determinism_20260908/det_repeat_a/decisions.jsonl",
+      "drafter": {
+        "drafter": "repeat-last",
+        "patched": true,
+        "buffer_threshold": null,
+        "cv_threshold": null,
+        "class": "RepeatLastDraftGenerator"
+      },
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "5",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "prior_run_gpus": {
+        "baseline6_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_ckpt_1ep_20260831": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+        ],
+        "smoke_spec_a_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_spec_b_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "sweep_spec_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "trace_smoke_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ]
+      },
+      "instance_changed": true,
+      "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline.",
+      "result": {
+        "status": "ok",
+        "error": null,
+        "wall_seconds": 17.19,
+        "timing": {
+          "wall_seconds": 17.19,
+          "test_on_env_time_s": [
+            12.848
+          ]
+        },
+        "metrics": {
+          "inference_calls": 235,
+          "inference_latency_mean_ms": 54.22571627769936,
+          "inference_latency_p50_ms": 69.6093060541898,
+          "inference_latency_p95_ms": 86.31899720057845,
+          "target_plm_calls": 165,
+          "llm_call_reduction_ratio": 0.2978723404255319,
+          "draft_attempts": 106,
+          "drafted_actions": 311,
+          "accepted_actions": 243,
+          "corrected_actions": 33,
+          "acceptance_rate": 0.7813504823151125,
+          "executed_speculative_actions": 176,
+          "queued_actions_served": 70,
+          "pending_actions": 0,
+          "fallback_calls": 59,
+          "state_mismatch_fallbacks": 59,
+          "buffer_mismatch_fallbacks": 50,
+          "feature_mismatch_fallbacks": 9,
+          "return_mismatch_fallbacks": 0,
+          "draft_generation_failures": 0,
+          "throughput_predictor_updates": 235,
+          "qoe_raw_mean": 1.16,
+          "mean_reward": 1.16,
+          "mean_bitrate_mbps": 1.2344680851063832,
+          "mean_rebuffer_s_per_chunk": 0.0,
+          "total_rebuffer_s": 0.0,
+          "mean_smoothness_mbps": 0.07446808510638298,
+          "evaluated_video_chunks": 235,
+          "token_reduction_ratio": 0.0,
+          "speculative_draft_steps": 3,
+          "speculative_verification_mode": "sample",
+          "speculative_buffer_tolerance": 1.0,
+          "speculative_state_tolerance": 0.25,
+          "speculative_return_tolerance": 0.01
+        },
+        "collected_result_files": [
+          "results/soyun/determinism_20260908/det_repeat_a/selector_metrics.json"
+        ],
+        "checkpoint_files": [],
+        "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+        "console_log": "results/soyun/determinism_20260908/det_repeat_a/console.log",
+        "decision_trace": {
+          "path": "results/soyun/determinism_20260908/det_repeat_a/decisions.jsonl",
+          "records": 235
+        },
+        "drafter": {
+          "drafter": "repeat-last",
+          "patched": true,
+          "buffer_threshold": null,
+          "cv_threshold": null,
+          "class": "RepeatLastDraftGenerator"
+        }
+      }
+    },
+    {
+      "run_id": "determinism_20260908",
+      "phase": "det_repeat_b",
+      "utc": "2026-09-08T13:24:30.715290+00:00",
+      "git_commit": "0d137ce5d03359bb2ba89621c696218ed402c5bb",
+      "git_branch": "soyun/spec-abr",
+      "git_status_porcelain": "?? docs/soyun/DRAFTER_ABLATION.md\n?? results/soyun/determinism_20260908/",
+      "argv_expanded": [
+        "run_plm.py",
+        "--test",
+        "--fp16",
+        "--seed",
+        "1",
+        "--plm-type",
+        "llama",
+        "--plm-size",
+        "base",
+        "--rank",
+        "128",
+        "--plm-dir",
+        "../downloaded_plms/llama/base",
+        "--model-dir",
+        "../downloaded_plms/ft_plms/try_llama2_7b",
+        "--trace",
+        "fcc-test",
+        "--trace-num",
+        "5",
+        "--video",
+        "video1",
+        "--fixed-order",
+        "--device",
+        "cuda:0",
+        "--device-out",
+        "cuda:0",
+        "--temporal-selector",
+        "none",
+        "--token-selector",
+        "none",
+        "--speculative-draft-steps",
+        "3",
+        "--speculative-verification-mode",
+        "sample",
+        "--speculative-buffer-tolerance",
+        "1.0",
+        "--speculative-state-tolerance",
+        "0.25",
+        "--speculative-return-tolerance",
+        "0.01"
+      ],
+      "seed": 1,
+      "determinism_notes": [
+        "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+        "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+        "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+      ],
+      "cfg_overrides": {
+        "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+        "results_dir": "/root/NetLLM_abr/results/soyun/determinism_20260908/det_repeat_b/raw"
+      },
+      "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+      "python": "3.10.13",
+      "package_versions": {
+        "torch": "2.2.0",
+        "transformers": "4.34.1",
+        "peft": "0.6.2",
+        "numpy": "1.24.4",
+        "accelerate": "0.23.0"
+      },
+      "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "decision_trace": "results/soyun/determinism_20260908/det_repeat_b/decisions.jsonl",
+      "drafter": {
+        "drafter": "repeat-last",
+        "patched": true,
+        "buffer_threshold": null,
+        "cv_threshold": null,
+        "class": "RepeatLastDraftGenerator"
+      },
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "5",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "prior_run_gpus": {
+        "baseline6_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_ckpt_1ep_20260831": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+        ],
+        "smoke_spec_a_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_spec_b_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "sweep_spec_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "trace_smoke_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ]
+      },
+      "instance_changed": true,
+      "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline.",
+      "result": {
+        "status": "ok",
+        "error": null,
+        "wall_seconds": 17.37,
+        "timing": {
+          "wall_seconds": 17.37,
+          "test_on_env_time_s": [
+            13.057
+          ]
+        },
+        "metrics": {
+          "inference_calls": 235,
+          "inference_latency_mean_ms": 55.11141299280001,
+          "inference_latency_p50_ms": 69.99718898441643,
+          "inference_latency_p95_ms": 88.06139192311093,
+          "target_plm_calls": 165,
+          "llm_call_reduction_ratio": 0.2978723404255319,
+          "draft_attempts": 106,
+          "drafted_actions": 311,
+          "accepted_actions": 243,
+          "corrected_actions": 33,
+          "acceptance_rate": 0.7813504823151125,
+          "executed_speculative_actions": 176,
+          "queued_actions_served": 70,
+          "pending_actions": 0,
+          "fallback_calls": 59,
+          "state_mismatch_fallbacks": 59,
+          "buffer_mismatch_fallbacks": 50,
+          "feature_mismatch_fallbacks": 9,
+          "return_mismatch_fallbacks": 0,
+          "draft_generation_failures": 0,
+          "throughput_predictor_updates": 235,
+          "qoe_raw_mean": 1.16,
+          "mean_reward": 1.16,
+          "mean_bitrate_mbps": 1.2344680851063832,
+          "mean_rebuffer_s_per_chunk": 0.0,
+          "total_rebuffer_s": 0.0,
+          "mean_smoothness_mbps": 0.07446808510638298,
+          "evaluated_video_chunks": 235,
+          "token_reduction_ratio": 0.0,
+          "speculative_draft_steps": 3,
+          "speculative_verification_mode": "sample",
+          "speculative_buffer_tolerance": 1.0,
+          "speculative_state_tolerance": 0.25,
+          "speculative_return_tolerance": 0.01
+        },
+        "collected_result_files": [
+          "results/soyun/determinism_20260908/det_repeat_b/selector_metrics.json"
+        ],
+        "checkpoint_files": [],
+        "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+        "console_log": "results/soyun/determinism_20260908/det_repeat_b/console.log",
+        "decision_trace": {
+          "path": "results/soyun/determinism_20260908/det_repeat_b/decisions.jsonl",
+          "records": 235
+        },
+        "drafter": {
+          "drafter": "repeat-last",
+          "patched": true,
+          "buffer_threshold": null,
+          "cv_threshold": null,
+          "class": "RepeatLastDraftGenerator"
+        }
+      }
+    },
+    {
+      "run_id": "determinism_20260908",
+      "phase": "det_hybrid_a",
+      "utc": "2026-09-08T13:24:51.319042+00:00",
+      "git_commit": "0d137ce5d03359bb2ba89621c696218ed402c5bb",
+      "git_branch": "soyun/spec-abr",
+      "git_status_porcelain": "?? docs/soyun/DRAFTER_ABLATION.md\n?? results/soyun/determinism_20260908/",
+      "argv_expanded": [
+        "run_plm.py",
+        "--test",
+        "--fp16",
+        "--seed",
+        "1",
+        "--plm-type",
+        "llama",
+        "--plm-size",
+        "base",
+        "--rank",
+        "128",
+        "--plm-dir",
+        "../downloaded_plms/llama/base",
+        "--model-dir",
+        "../downloaded_plms/ft_plms/try_llama2_7b",
+        "--trace",
+        "fcc-test",
+        "--trace-num",
+        "5",
+        "--video",
+        "video1",
+        "--fixed-order",
+        "--device",
+        "cuda:0",
+        "--device-out",
+        "cuda:0",
+        "--temporal-selector",
+        "none",
+        "--token-selector",
+        "none",
+        "--speculative-draft-steps",
+        "3",
+        "--speculative-verification-mode",
+        "sample",
+        "--speculative-buffer-tolerance",
+        "1.0",
+        "--speculative-state-tolerance",
+        "0.25",
+        "--speculative-return-tolerance",
+        "0.01"
+      ],
+      "seed": 1,
+      "determinism_notes": [
+        "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+        "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+        "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+      ],
+      "cfg_overrides": {
+        "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+        "results_dir": "/root/NetLLM_abr/results/soyun/determinism_20260908/det_hybrid_a/raw"
+      },
+      "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+      "python": "3.10.13",
+      "package_versions": {
+        "torch": "2.2.0",
+        "transformers": "4.34.1",
+        "peft": "0.6.2",
+        "numpy": "1.24.4",
+        "accelerate": "0.23.0"
+      },
+      "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "decision_trace": "results/soyun/determinism_20260908/det_hybrid_a/decisions.jsonl",
+      "drafter": {
+        "drafter": "hybrid",
+        "patched": true,
+        "buffer_threshold": 5.0,
+        "cv_threshold": 0.3,
+        "class": "HybridDraftGenerator"
+      },
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "5",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "prior_run_gpus": {
+        "baseline6_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_ckpt_1ep_20260831": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+        ],
+        "smoke_spec_a_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_spec_b_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "sweep_spec_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "trace_smoke_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ]
+      },
+      "instance_changed": true,
+      "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline.",
+      "result": {
+        "status": "ok",
+        "error": null,
+        "wall_seconds": 17.8,
+        "timing": {
+          "wall_seconds": 17.8,
+          "test_on_env_time_s": [
+            13.504
+          ]
+        },
+        "metrics": {
+          "inference_calls": 235,
+          "inference_latency_mean_ms": 57.01092383130751,
+          "inference_latency_p50_ms": 71.0159600712359,
+          "inference_latency_p95_ms": 90.97925372188911,
+          "target_plm_calls": 167,
+          "llm_call_reduction_ratio": 0.28936170212765955,
+          "draft_attempts": 111,
+          "drafted_actions": 325,
+          "accepted_actions": 229,
+          "corrected_actions": 44,
+          "acceptance_rate": 0.7046153846153846,
+          "executed_speculative_actions": 179,
+          "queued_actions_served": 68,
+          "pending_actions": 0,
+          "fallback_calls": 56,
+          "state_mismatch_fallbacks": 56,
+          "buffer_mismatch_fallbacks": 44,
+          "feature_mismatch_fallbacks": 12,
+          "return_mismatch_fallbacks": 0,
+          "draft_generation_failures": 0,
+          "throughput_predictor_updates": 235,
+          "qoe_raw_mean": 1.0948936170212764,
+          "mean_reward": 1.0948936170212764,
+          "mean_bitrate_mbps": 1.1821276595744679,
+          "mean_rebuffer_s_per_chunk": 0.0,
+          "total_rebuffer_s": 0.0,
+          "mean_smoothness_mbps": 0.08723404255319149,
+          "evaluated_video_chunks": 235,
+          "token_reduction_ratio": 0.0,
+          "speculative_draft_steps": 3,
+          "speculative_verification_mode": "sample",
+          "speculative_buffer_tolerance": 1.0,
+          "speculative_state_tolerance": 0.25,
+          "speculative_return_tolerance": 0.01
+        },
+        "collected_result_files": [
+          "results/soyun/determinism_20260908/det_hybrid_a/selector_metrics.json"
+        ],
+        "checkpoint_files": [],
+        "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+        "console_log": "results/soyun/determinism_20260908/det_hybrid_a/console.log",
+        "decision_trace": {
+          "path": "results/soyun/determinism_20260908/det_hybrid_a/decisions.jsonl",
+          "records": 235
+        },
+        "drafter": {
+          "drafter": "hybrid",
+          "patched": true,
+          "buffer_threshold": 5.0,
+          "cv_threshold": 0.3,
+          "class": "HybridDraftGenerator"
+        }
+      }
+    },
+    {
+      "run_id": "determinism_20260908",
+      "phase": "det_hybrid_b",
+      "utc": "2026-09-08T13:25:12.309741+00:00",
+      "git_commit": "0d137ce5d03359bb2ba89621c696218ed402c5bb",
+      "git_branch": "soyun/spec-abr",
+      "git_status_porcelain": "?? docs/soyun/DRAFTER_ABLATION.md\n?? results/soyun/determinism_20260908/",
+      "argv_expanded": [
+        "run_plm.py",
+        "--test",
+        "--fp16",
+        "--seed",
+        "1",
+        "--plm-type",
+        "llama",
+        "--plm-size",
+        "base",
+        "--rank",
+        "128",
+        "--plm-dir",
+        "../downloaded_plms/llama/base",
+        "--model-dir",
+        "../downloaded_plms/ft_plms/try_llama2_7b",
+        "--trace",
+        "fcc-test",
+        "--trace-num",
+        "5",
+        "--video",
+        "video1",
+        "--fixed-order",
+        "--device",
+        "cuda:0",
+        "--device-out",
+        "cuda:0",
+        "--temporal-selector",
+        "none",
+        "--token-selector",
+        "none",
+        "--speculative-draft-steps",
+        "3",
+        "--speculative-verification-mode",
+        "sample",
+        "--speculative-buffer-tolerance",
+        "1.0",
+        "--speculative-state-tolerance",
+        "0.25",
+        "--speculative-return-tolerance",
+        "0.01"
+      ],
+      "seed": 1,
+      "determinism_notes": [
+        "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+        "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+        "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+      ],
+      "cfg_overrides": {
+        "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+        "results_dir": "/root/NetLLM_abr/results/soyun/determinism_20260908/det_hybrid_b/raw"
+      },
+      "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+      "python": "3.10.13",
+      "package_versions": {
+        "torch": "2.2.0",
+        "transformers": "4.34.1",
+        "peft": "0.6.2",
+        "numpy": "1.24.4",
+        "accelerate": "0.23.0"
+      },
+      "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "decision_trace": "results/soyun/determinism_20260908/det_hybrid_b/decisions.jsonl",
+      "drafter": {
+        "drafter": "hybrid",
+        "patched": true,
+        "buffer_threshold": 5.0,
+        "cv_threshold": 0.3,
+        "class": "HybridDraftGenerator"
+      },
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "5",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+      "prior_run_gpus": {
+        "baseline6_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_ckpt_1ep_20260831": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+        ],
+        "smoke_spec_a_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "smoke_spec_b_20260901": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "sweep_spec_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ],
+        "trace_smoke_20260902": [
+          "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+        ]
+      },
+      "instance_changed": true,
+      "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline.",
+      "result": {
+        "status": "ok",
+        "error": null,
+        "wall_seconds": 18.09,
+        "timing": {
+          "wall_seconds": 18.09,
+          "test_on_env_time_s": [
+            13.756
+          ]
+        },
+        "metrics": {
+          "inference_calls": 235,
+          "inference_latency_mean_ms": 58.09383257589442,
+          "inference_latency_p50_ms": 71.06782507617027,
+          "inference_latency_p95_ms": 100.13316462282089,
+          "target_plm_calls": 167,
+          "llm_call_reduction_ratio": 0.28936170212765955,
+          "draft_attempts": 111,
+          "drafted_actions": 325,
+          "accepted_actions": 229,
+          "corrected_actions": 44,
+          "acceptance_rate": 0.7046153846153846,
+          "executed_speculative_actions": 179,
+          "queued_actions_served": 68,
+          "pending_actions": 0,
+          "fallback_calls": 56,
+          "state_mismatch_fallbacks": 56,
+          "buffer_mismatch_fallbacks": 44,
+          "feature_mismatch_fallbacks": 12,
+          "return_mismatch_fallbacks": 0,
+          "draft_generation_failures": 0,
+          "throughput_predictor_updates": 235,
+          "qoe_raw_mean": 1.0948936170212764,
+          "mean_reward": 1.0948936170212764,
+          "mean_bitrate_mbps": 1.1821276595744679,
+          "mean_rebuffer_s_per_chunk": 0.0,
+          "total_rebuffer_s": 0.0,
+          "mean_smoothness_mbps": 0.08723404255319149,
+          "evaluated_video_chunks": 235,
+          "token_reduction_ratio": 0.0,
+          "speculative_draft_steps": 3,
+          "speculative_verification_mode": "sample",
+          "speculative_buffer_tolerance": 1.0,
+          "speculative_state_tolerance": 0.25,
+          "speculative_return_tolerance": 0.01
+        },
+        "collected_result_files": [
+          "results/soyun/determinism_20260908/det_hybrid_b/selector_metrics.json"
+        ],
+        "checkpoint_files": [],
+        "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+        "console_log": "results/soyun/determinism_20260908/det_hybrid_b/console.log",
+        "decision_trace": {
+          "path": "results/soyun/determinism_20260908/det_hybrid_b/decisions.jsonl",
+          "records": 235
+        },
+        "drafter": {
+          "drafter": "hybrid",
+          "patched": true,
+          "buffer_threshold": 5.0,
+          "cv_threshold": 0.3,
+          "class": "HybridDraftGenerator"
+        }
+      }
+    }
+  ],
+  "instance_changed": true,
+  "prior_run_gpus": {
+    "baseline6_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "smoke_ckpt_1ep_20260831": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+    ],
+    "smoke_spec_a_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "smoke_spec_b_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "sweep_spec_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "trace_smoke_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ]
+  }
+}

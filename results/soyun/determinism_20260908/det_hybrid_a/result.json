@@ -1,0 +1,64 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 17.8,
+  "timing": {
+    "wall_seconds": 17.8,
+    "test_on_env_time_s": [
+      13.504
+    ]
+  },
+  "metrics": {
+    "inference_calls": 235,
+    "inference_latency_mean_ms": 57.01092383130751,
+    "inference_latency_p50_ms": 71.0159600712359,
+    "inference_latency_p95_ms": 90.97925372188911,
+    "target_plm_calls": 167,
+    "llm_call_reduction_ratio": 0.28936170212765955,
+    "draft_attempts": 111,
+    "drafted_actions": 325,
+    "accepted_actions": 229,
+    "corrected_actions": 44,
+    "acceptance_rate": 0.7046153846153846,
+    "executed_speculative_actions": 179,
+    "queued_actions_served": 68,
+    "pending_actions": 0,
+    "fallback_calls": 56,
+    "state_mismatch_fallbacks": 56,
+    "buffer_mismatch_fallbacks": 44,
+    "feature_mismatch_fallbacks": 12,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 235,
+    "qoe_raw_mean": 1.0948936170212764,
+    "mean_reward": 1.0948936170212764,
+    "mean_bitrate_mbps": 1.1821276595744679,
+    "mean_rebuffer_s_per_chunk": 0.0,
+    "total_rebuffer_s": 0.0,
+    "mean_smoothness_mbps": 0.08723404255319149,
+    "evaluated_video_chunks": 235,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/determinism_20260908/det_hybrid_a/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/determinism_20260908/det_hybrid_a/console.log",
+  "decision_trace": {
+    "path": "results/soyun/determinism_20260908/det_hybrid_a/decisions.jsonl",
+    "records": 235
+  },
+  "drafter": {
+    "drafter": "hybrid",
+    "patched": true,
+    "buffer_threshold": 5.0,
+    "cv_threshold": 0.3,
+    "class": "HybridDraftGenerator"
+  }
+}

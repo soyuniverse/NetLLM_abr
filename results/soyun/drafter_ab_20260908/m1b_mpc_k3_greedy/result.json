@@ -1,0 +1,63 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 400.5,
+  "timing": {
+    "wall_seconds": 400.5,
+    "test_on_env_time_s": [
+      396.113
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 83.87427623403516,
+    "inference_latency_p50_ms": 98.02315651904792,
+    "inference_latency_p95_ms": 105.71446027024649,
+    "target_plm_calls": 4405,
+    "llm_call_reduction_ratio": 0.06276595744680846,
+    "draft_attempts": 4137,
+    "drafted_actions": 12145,
+    "accepted_actions": 746,
+    "corrected_actions": 4054,
+    "acceptance_rate": 0.061424454508028,
+    "executed_speculative_actions": 4432,
+    "queued_actions_served": 295,
+    "pending_actions": 0,
+    "fallback_calls": 268,
+    "state_mismatch_fallbacks": 268,
+    "buffer_mismatch_fallbacks": 236,
+    "feature_mismatch_fallbacks": 32,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9190389226049035,
+    "mean_reward": 0.9190389226049035,
+    "mean_bitrate_mbps": 0.9597340425531915,
+    "mean_rebuffer_s_per_chunk": 1.816248178888155e-05,
+    "total_rebuffer_s": 0.08536366440774328,
+    "mean_smoothness_mbps": 0.04061702127659574,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "greedy",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/drafter_ab_20260908/m1b_mpc_k3_greedy/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/drafter_ab_20260908/m1b_mpc_k3_greedy/console.log",
+  "decision_trace": {
+    "path": "results/soyun/drafter_ab_20260908/m1b_mpc_k3_greedy/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "mpc",
+    "patched": false,
+    "buffer_threshold": null,
+    "cv_threshold": null
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 296.38,
+  "timing": {
+    "wall_seconds": 296.38,
+    "test_on_env_time_s": [
+      292.009
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 61.72662549384652,
+    "inference_latency_p50_ms": 62.094191554933786,
+    "inference_latency_p95_ms": 143.34667007788084,
+    "target_plm_calls": 2730,
+    "llm_call_reduction_ratio": 0.41914893617021276,
+    "draft_attempts": 1730,
+    "drafted_actions": 8245,
+    "accepted_actions": 5733,
+    "corrected_actions": 748,
+    "acceptance_rate": 0.6953305033353547,
+    "executed_speculative_actions": 3700,
+    "queued_actions_served": 1970,
+    "pending_actions": 0,
+    "fallback_calls": 1000,
+    "state_mismatch_fallbacks": 1000,
+    "buffer_mismatch_fallbacks": 840,
+    "feature_mismatch_fallbacks": 160,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9111119325918198,
+    "mean_reward": 0.9111119325918198,
+    "mean_bitrate_mbps": 1.0112659574468084,
+    "mean_rebuffer_s_per_chunk": 0.007898264068206198,
+    "total_rebuffer_s": 37.12184112056913,
+    "mean_smoothness_mbps": 0.06619148936170213,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 5,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/drafter_ab_20260908/m4_repeat_k5/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/drafter_ab_20260908/m4_repeat_k5/console.log",
+  "decision_trace": {
+    "path": "results/soyun/drafter_ab_20260908/m4_repeat_k5/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "repeat-last",
+    "patched": true,
+    "buffer_threshold": null,
+    "cv_threshold": null,
+    "class": "RepeatLastDraftGenerator"
+  }
+}

@@ -1,41 +1,33 @@
 {
  "runs": {
-  "baseline6_20260902": {
-   "file": "baseline6_20260902_summary.json",
+  "determinism_20260908": {
+   "file": "determinism_20260908_summary.json",
    "phases": [
-    "e_speculative",
-    "f_all_three"
+    "det_hybrid_a",
+    "det_hybrid_b",
+    "det_mpc_a",
+    "det_mpc_b",
+    "det_repeat_a",
+    "det_repeat_b"
    ],
-   "source_bytes": 10971671,
-   "source_lines": 9400,
-   "summary_bytes": 17232
+   "source_bytes": 1690663,
+   "source_lines": 1410,
+   "summary_bytes": 47901
   },
-  "sweep_spec_20260902": {
-   "file": "sweep_spec_20260902_summary.json",
+  "drafter_ab_20260908": {
+   "file": "drafter_ab_20260908_summary.json",
    "phases": [
-    "s0_mode_sample",
-    "s1_k1",
-    "s2_k2",
-    "s2_k2_precheck",
-    "s3_k4",
-    "s4_k5",
-    "s5_buftol2",
-    "s6_buftol4",
-    "s7_buftol8",
-    "s8_statetol05"
+    "m1a_mpc_k3_sample",
+    "m1b_mpc_k3_greedy",
+    "m2_repeat_k3",
+    "m3_hybrid_k3",
+    "m4_repeat_k5",
+    "m5_hybrid_k5",
+    "m6_best_plus_selectors"
    ],
-   "source_bytes": 54831594,
-   "source_lines": 47000,
-   "summary_bytes": 84972
-  },
-  "trace_smoke_20260902": {
-   "file": "trace_smoke_20260902_summary.json",
-   "phases": [
-    "e_smoke"
-   ],
-   "source_bytes": 110162,
-   "source_lines": 94,
-   "summary_bytes": 7632
+   "source_bytes": 39424568,
+   "source_lines": 32900,
+   "summary_bytes": 61568
   }
  },
  "schema_version": 2

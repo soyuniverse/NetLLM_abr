@@ -1,0 +1,64 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 186.57,
+  "timing": {
+    "wall_seconds": 186.57,
+    "test_on_env_time_s": [
+      182.192
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 38.365602610295916,
+    "inference_latency_p50_ms": 58.20833606412634,
+    "inference_latency_p95_ms": 63.087828241987154,
+    "target_plm_calls": 2924,
+    "llm_call_reduction_ratio": 0.37787234042553186,
+    "draft_attempts": 2045,
+    "drafted_actions": 5997,
+    "accepted_actions": 4649,
+    "corrected_actions": 626,
+    "acceptance_rate": 0.775220943805236,
+    "executed_speculative_actions": 3821,
+    "queued_actions_served": 1776,
+    "pending_actions": 0,
+    "fallback_calls": 879,
+    "state_mismatch_fallbacks": 879,
+    "buffer_mismatch_fallbacks": 712,
+    "feature_mismatch_fallbacks": 167,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9119135034489697,
+    "mean_reward": 0.9119135034489697,
+    "mean_bitrate_mbps": 1.0085319148936172,
+    "mean_rebuffer_s_per_chunk": 0.006469892814935298,
+    "total_rebuffer_s": 30.4084962301959,
+    "mean_smoothness_mbps": 0.06879787234042553,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.7908886557770118,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/drafter_ab_20260908/m6_best_plus_selectors/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/drafter_ab_20260908/m6_best_plus_selectors/console.log",
+  "decision_trace": {
+    "path": "results/soyun/drafter_ab_20260908/m6_best_plus_selectors/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "repeat-last",
+    "patched": true,
+    "buffer_threshold": null,
+    "cv_threshold": null,
+    "class": "RepeatLastDraftGenerator"
+  }
+}

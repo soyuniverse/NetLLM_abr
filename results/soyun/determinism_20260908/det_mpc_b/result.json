@@ -1,0 +1,63 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 21.7,
+  "timing": {
+    "wall_seconds": 21.7,
+    "test_on_env_time_s": [
+      17.344
+    ]
+  },
+  "metrics": {
+    "inference_calls": 235,
+    "inference_latency_mean_ms": 73.3606502245319,
+    "inference_latency_p50_ms": 80.6230140151456,
+    "inference_latency_p95_ms": 85.40950791211799,
+    "target_plm_calls": 225,
+    "llm_call_reduction_ratio": 0.04255319148936165,
+    "draft_attempts": 202,
+    "drafted_actions": 594,
+    "accepted_actions": 47,
+    "corrected_actions": 198,
+    "acceptance_rate": 0.07912457912457913,
+    "executed_speculative_actions": 212,
+    "queued_actions_served": 10,
+    "pending_actions": 0,
+    "fallback_calls": 23,
+    "state_mismatch_fallbacks": 23,
+    "buffer_mismatch_fallbacks": 21,
+    "feature_mismatch_fallbacks": 2,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 235,
+    "qoe_raw_mean": 1.18468085106383,
+    "mean_reward": 1.18468085106383,
+    "mean_bitrate_mbps": 1.267872340425532,
+    "mean_rebuffer_s_per_chunk": 0.0,
+    "total_rebuffer_s": 0.0,
+    "mean_smoothness_mbps": 0.08319148936170213,
+    "evaluated_video_chunks": 235,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/determinism_20260908/det_mpc_b/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/determinism_20260908/det_mpc_b/console.log",
+  "decision_trace": {
+    "path": "results/soyun/determinism_20260908/det_mpc_b/decisions.jsonl",
+    "records": 235
+  },
+  "drafter": {
+    "drafter": "mpc",
+    "patched": false,
+    "buffer_threshold": null,
+    "cv_threshold": null
+  }
+}
