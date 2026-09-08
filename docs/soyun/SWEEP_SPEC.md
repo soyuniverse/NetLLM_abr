@@ -384,3 +384,79 @@ results/soyun/sweep_spec_20260902/
   analysis/{sweep_table.csv, sweep_rows.json, sweep_tables.md}
   logs/<phase>.log*                      (* gitignored: .jsonl / .log)
 ```
+
+---
+
+## 12. 단가 모형 갱신 — drafter 실측점 추가 (2026-09-08)
+
+**추가된 데이터:** [[DRAFTER_ABLATION]] 의 6 run (`drafter_ab_20260908`), 새 인스턴스
+(RTX 3090, driver 570.172.08). 새 인스턴스는 절대 latency 가 BASELINE6/SWEEP 대비
+~1.6× 느리므로 이 캠페인은 **자체 A1 (`a1_all_off`, latency mean 80.627 ms)** 을
+분모로 쓴다. 아래 모형 파라미터도 그 A1 로 다시 푼 것이다.
+
+### 12.1 모형의 구조는 유지되나 파라미터가 인스턴스마다 이동한다
+
+§3.5 / §4 의 손익분기 모형:
+
+```
+mean_latency(q) = (1 − q)·c_verify + q·c_serve
+q_parity        = (c_verify − c_plain) / (c_verify − c_serve)
+```
+
+| | c_plain | c_verify(k3) | c_serve | **q_parity(k3)** | q_1.24x(k3) |
+|---|---:|---:|---:|---:|---:|
+| BASELINE6 / SWEEP (구 인스턴스) | 50.329 | 58.808 | 0.832 | **14.63 %** | 31.43 % |
+| drafter_ab (신 인스턴스, mpc m1a) | 80.627 | 89.30 | 1.77 | **9.91 %** | 27.74 % |
+| drafter_ab (신, repeat-last m2) | 80.627 | 90.91 | 1.77 | **11.54 %** | 29.04 % |
+
+context surcharge (`c_verify − c_plain`) 는 8.5 → 10.3 ms 로 비슷하지만 분모
+(`c_verify − c_serve`) 가 58 → 89 ms 로 커져서 **q_parity 가 오히려 낮아졌다.**
+즉 "본전 q = 14.63 %" 는 구 인스턴스 상수이고, 이 인스턴스에서는 **~11 %** 다.
+**모형의 형태(q 에 대한 선형)는 두 인스턴스·세 drafter 에서 동일하게 성립한다.**
+
+### 12.2 k=3 에서는 실측점이 모형 위에 정확히 앉는다
+
+| run | q 실측 | speedup 모형(2-bucket) | speedup 실측 | 오차 |
+|---|---:|---:|---:|---:|
+| m1a mpc k3 sample | 7.36 % | 0.973× | 0.974× | +0.1 % |
+| m2 repeat-last k3 | 37.77 % | 1.408× | 1.419× | +0.8 % |
+| m3 hybrid k3 | 37.28 % | 1.404× | 1.413× | +0.6 % |
+
+drafter 를 바꿔도(탐색비용 0) k=3 단가 모형은 그대로다. repeat-last 는 q 를
+6 %→38 % 로 밀어 올려 **모형 곡선을 따라 speedup 1.0 과 1.24× 를 모두 넘겼다** —
+파라미터로는 못 넘던 선이다.
+
+### 12.3 k=5 에서 모형이 어긋난다 — fallback 지분이 원인 (**발견**)
+
+| run | q 실측 | fb 지분 | 2-bucket 모형 | **3-bucket 모형** | 실측 |
+|---|---:|---:|---:|---:|---:|
+| m4 repeat-last k5 | 41.9 % | 21 % | 1.228× | **1.309×** | 1.306× |
+| m5 hybrid k5 | 41.9 % | 21 % | 1.255× | **1.330×** | 1.326× |
+
+2-bucket 모형(§3.5, 검증 호출 vs queue 재사용)은 **k=5 에서 speedup 을 5–6 %
+과소 예측**한다. 원인: 모형이 모든 비-serve 결정을 `c_verify` 로 계산하는데,
+**fallback 결정은 `c_fall`(88–93 ms) ≈ `c_plain` 수준**이지 `c_verify`(110–112 ms)
+가 아니다. fallback 지분이 6–8 %(mpc, SWEEP 전체)일 때는 이 오차가 묻히지만,
+**zero-search drafter 는 항상 draft 하므로**(repeat-last 는 사양상 거를 수 없다)
+draft 의 절대량이 늘고 그중 buffer tolerance 를 못 넘는 비율이 21 %까지 오른다.
+
+**→ 갱신된 단가 모형 (3-bucket):**
+
+```
+mean_latency = (n_verify·c_verify + n_fallback·c_fall + n_serve·c_serve) / N
+c_fall ≈ c_plain + (draft embed + verify context) 왕복 1회 ≈ 88–93 ms (실측)
+```
+
+이 형태는 6 run 전부를 **오차 ≤ 0.4 %** 로 재현한다 (m4 1.309 vs 1.306,
+m5 1.330 vs 1.326). SWEEP_SPEC 의 9 run 은 fallback 지분이 낮아 2-bucket 으로도
+충분했지만, **drafter 를 바꾸는 순간 fallback 항이 필수**가 된다. 이것이
+"탐색비용 0 으로 인한 단가 구조 변화" 의 정체다 — 탐색비용이 사라진 게 아니라
+**draft 빈도가 올라 fallback 이 새 지배항이 됐다.**
+
+### 12.4 결론
+
+- q vs speedup 모형은 **살아있다.** drafter 를 바꿔도 q 만 알면 speedup 이 예측된다.
+- 단 **본전 q 는 인스턴스 상수**(구 14.63 %, 신 ~11 %)이고, **k=5 부터는
+  fallback 항을 넣은 3-bucket 형태**를 써야 한다.
+- repeat-last 는 q 를 5× 밀어 올려 모형 곡선을 타고 1.24× 선을 넘겼다 —
+  파라미터 스윕이 6.3 pp 부족했던 그 선이다 ([[DRAFTER_ABLATION]] §2).
