@@ -383,9 +383,8 @@ results/soyun/derived/drafter_ab_20260908_summary.json   <- decisions.jsonl dist
 bash abr_spec/hooks/install.sh
 git checkout 0d137ce           # freeze commit
 
-# 1. determinism (Task 0.2, ~8 min GPU)  -- 스크립트는 세션 scratch, 명령만 기록:
-#    각 drafter x {a,b} 를 trace-num 5 / seed 1 / sample / k=3 로 run_wrapped.py 직접 호출
-#    RID=determinism_20260908, --decision-trace, drafter 는 --speculative-drafter
+# 1. determinism (Task 0.2, ~8 min GPU)
+bash abr_spec/run_determinism_check.sh     # 3 drafters x {a,b}, trace-num 5, seed 1, sample, k=3
 
 # 2. A1 (이 인스턴스) + 6 phase ablation (~35 min GPU, ~$0.13)
 python abr_spec/run_wrapped.py --run-id drafter_ab_20260908 --phase a1_all_off \
