@@ -428,3 +428,18 @@ python abr_spec/make_figures.py --out-dir results/soyun/figures
 `plm_special/speculative/*`) 는 실험 중 변경 없음. freeze 직전 변경은 §0:
 `decision_trace.py`(모든 drafter 계측) + `breakeven.py`(빈 verify 가드), 둘 다
 40-test + tolerance-0 회귀 통과, m1a==s0 end-to-end 확인.
+
+## 7. 논문 그림 4종 (Task 4)
+
+`python abr_spec/make_figures.py --out-dir results/soyun/figures` →
+각 300 dpi PNG + vector PDF, 흑백 대응(hatch), 영문 캡션(`<name>.caption.txt`).
+바이너리는 gitignore, `results/soyun/figures/README.md` 가 tracked 기록.
+
+| 그림 | 내용 | 핵심 메시지 |
+|---|---|---|
+| fig1 | 6조건 × [QoE, speedup] 이중축, A1 선 + determinism 오차선, 1.0×·1.24× 선 | mpc <1.0, zero-search 4종 모두 1.24× 돌파, QoE −1.5~4 % |
+| fig2 | q vs speedup — 단가 모형 곡선(구·신 인스턴스) + 파라미터 11점 + drafter 실측점 + 본전/1.24× q 선 | 파라미터는 q<10 %·speedup<1.0 에서 멈춤, drafter 는 q 38–42 % 로 곡선을 타고 넘음 |
+| fig3 | buffer tolerance 완화 시 buffer/state fallback stacked bar | 총 fallback 불변, 구성만 이동 → gate 가 아니라 draft 가 병목 |
+| fig4 | drafter 3종 × [일치율, q, speedup, ΔQoE, Δrebuffer] + 버퍼 구간별 일치율 | repeat-last 는 어디서나 ~88 %, hybrid 는 `<5s` 에서 mpc 수준(43 %)으로 라우팅 |
+
+수치는 전부 tracked 결과 파일에서 읽으며 없는 값은 "n/a" (추정 없음).
