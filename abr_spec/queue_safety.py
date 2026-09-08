@@ -84,14 +84,16 @@ def analyse(rows, window):
     q_direct = [r.get("rebuffer_after_s") for r in rows if r.get("stage") == "queue_serve"]
     llm_direct = [r.get("rebuffer_after_s") for r in rows if r.get("stage") in LLM_STAGES]
 
-    # ---- B: lagged, offsets 1..W after any queue_serve ---------------------
+    # ---- B: lagged, offsets 1..W after any queue_serve (deduped) ----------
     lagged, lagged_seen = [], set()
-    # ---- C: window incidence + total rebuffering in windows ---------------
+    # ---- C: per-queue_serve window incidence -----------------------------
     win_has_event = 0
-    win_total_s = 0.0
     n_qserve = 0
+    # union of every decision that falls in ANY [0..W] post-queue_serve window,
+    # keyed by (trace_idx, t) so overlapping windows are not double counted.
+    window_members = {}
     per_band = defaultdict(lambda: {"q_direct": [], "llm_direct": [],
-                                    "win_events": 0, "win_n": 0, "win_total_s": 0.0})
+                                    "win_events": 0, "win_n": 0})
 
     for tr in traces:
         for i, r in enumerate(tr):
@@ -102,21 +104,19 @@ def analyse(rows, window):
             per_band[b]["q_direct"].append(r.get("rebuffer_after_s"))
             per_band[b]["win_n"] += 1
 
-            # window = offsets 0..W within this trace
-            w_rows = tr[i:i + window + 1]
-            reb = [x.get("rebuffer_after_s") or 0.0 for x in w_rows]
+            w_rows = tr[i:i + window + 1]              # offsets 0..W in this trace
             has_ev = any((x.get("rebuffered") or (x.get("rebuffer_after_s") or 0) > 0)
                          for x in w_rows)
             win_has_event += int(has_ev)
-            win_total_s += sum(reb)
             per_band[b]["win_events"] += int(has_ev)
-            per_band[b]["win_total_s"] += sum(reb)
 
-            for x in w_rows[1:]:
-                key = (x.get("trace_idx"), x.get("t"))
-                if key not in lagged_seen:
-                    lagged_seen.add(key)
-                    lagged.append(x.get("rebuffer_after_s"))
+            for off, x in enumerate(w_rows):
+                window_members.setdefault((x.get("trace_idx"), x.get("t")), x)
+                if off >= 1:
+                    key = (x.get("trace_idx"), x.get("t"))
+                    if key not in lagged_seen:
+                        lagged_seen.add(key)
+                        lagged.append(x.get("rebuffer_after_s"))
 
     for r in rows:
         if r.get("stage") in LLM_STAGES:
@@ -124,6 +124,10 @@ def analyse(rows, window):
             per_band[b]["llm_direct"].append(r.get("rebuffer_after_s"))
 
     total_reb_all = sum((r.get("rebuffer_after_s") or 0.0) for r in rows)
+    win_total_s = sum((x.get("rebuffer_after_s") or 0.0) for x in window_members.values())
+    win_band_total = defaultdict(float)
+    for x in window_members.values():
+        win_band_total[band(x.get("buffer"), BUFFER_BANDS)] += x.get("rebuffer_after_s") or 0.0
 
     bands_out = []
     for name, _, _ in list(BUFFER_BANDS) + [("unknown", None, None)]:
@@ -136,7 +140,7 @@ def analyse(rows, window):
             "A_queue_direct_mean_s": mean(d["q_direct"]),
             "A_llm_direct_mean_s": mean(d["llm_direct"]),
             "C_window_incidence": pct(d["win_events"], d["win_n"]),
-            "window_total_rebuffer_s": d["win_total_s"],
+            "window_union_rebuffer_s": win_band_total.get(name, 0.0),
         })
 
     return {
@@ -160,7 +164,9 @@ def analyse(rows, window):
             "windows_with_rebuffer_event": win_has_event,
             "queue_serve_windows": n_qserve,
             "rate": pct(win_has_event, n_qserve),
-            "window_total_rebuffer_s": win_total_s,
+            "window_union_rebuffer_s": win_total_s,
+            "window_union_decisions": len(window_members),
+            "window_union_share_of_run_rebuffer": pct(win_total_s, total_reb_all),
         },
         "by_buffer_band": bands_out,
     }
@@ -199,7 +205,7 @@ def main():
 
     lines = ["label,decisions,q_share,W,A_queue_mean_s,A_llm_mean_s,"
              "B_lagged_mean_s,B_run_mean_s,C_incidence,C_vs_mpc_ratio,"
-             "window_total_rebuffer_s,run_total_rebuffer_s"]
+             "window_union_rebuffer_s,window_union_share_of_run,run_total_rebuffer_s"]
     for k, v in report.items():
         lines.append(",".join(str(x) for x in [
             k, v["decisions"], f"{v['queue_serve_share']:.6f}" if v['queue_serve_share'] else 0,
@@ -207,7 +213,8 @@ def main():
             v["A_direct"]["queue_serve_mean_s"], v["A_direct"]["llm_served_mean_s"],
             v["B_lagged"]["post_queue_offsets_1..W_mean_s"], v["B_lagged"]["run_mean_s"],
             v["C_incidence"]["rate"], v["C_incidence"].get("vs_mpc_ref_ratio"),
-            v["C_incidence"]["window_total_rebuffer_s"], v["total_rebuffer_s_run"],
+            v["C_incidence"]["window_union_rebuffer_s"],
+            v["C_incidence"]["window_union_share_of_run_rebuffer"], v["total_rebuffer_s_run"],
         ]))
     (out / "queue_safety.csv").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
