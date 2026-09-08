@@ -13,11 +13,16 @@ Patched (wrapper-only, original always called):
       reason are recovered from counter deltas rather than guessed.
   ``...OfflineRLPolicy._actions_from_verification_logits``
       captures the LLM (target-model) action list for the k drafted steps.
-  ``plm_special.speculative.mpc_draft.RobustMPCDraftGenerator.generate``
-      captures the MPC draft actions and, separately, the **CPU time of the
-      6^k brute-force rollout itself** -- this is the number that separates
-      "latency lost to the MPC search" from "latency lost to a longer context".
-  ``...RobustMPCDraftGenerator.observe``
+  ``plm_special.speculative.mpc_draft.BaseDraftGenerator.generate``
+      captures the draft actions and, separately, the **CPU time of the
+      action proposal itself** (6^k brute-force for mpc, ~0 for repeat-last) --
+      this is the number that separates "latency lost to the draft search" from
+      "latency lost to a longer context".  Patched on ``BaseDraftGenerator`` so
+      every drafter (``mpc`` / ``repeat-last`` / ``hybrid``) is instrumented;
+      ``mpc`` behaviour is unchanged because ``RobustMPCDraftGenerator`` does
+      not override ``generate``.  ``hybrid``'s per-decision route
+      (``last_route``) and the concrete drafter class are recorded too.
+  ``...BaseDraftGenerator.observe``
       the robust-throughput predictor update (also pure CPU).
   ``baseline_special.env.Environment.get_video_chunk``
       the *outcome* of the previous decision (rebuffer / buffer / delay).  A
@@ -77,6 +82,8 @@ class _State:
         self.mpc_cpu_s = None
         self.mpc_wall_s = None
         self.mpc_bandwidth = None
+        self.draft_route = None
+        self.drafter_class = None
         self.observe_cpu_s = 0.0
         self.observe_wall_s = 0.0
         self.target_actions = None
@@ -124,7 +131,11 @@ def install(jsonl_path):
     atexit.register(_S.close)
 
     Policy = rlp_mod.OfflineRLPolicy
-    Gen = mpc_mod.RobustMPCDraftGenerator
+    # Patch the *base* generator: generate()/observe() live only on
+    # BaseDraftGenerator, so this one patch instruments mpc, repeat-last and
+    # hybrid alike.  RobustMPCDraftGenerator does not override generate(), so the
+    # mpc path is byte-for-byte what it was when only the subclass was patched.
+    Gen = mpc_mod.BaseDraftGenerator
     Env = env_mod.Environment
 
     orig_sample_spec = Policy.sample_speculative
@@ -143,6 +154,8 @@ def install(jsonl_path):
             _S.mpc_wall_s = time.perf_counter() - w0
         _S.mpc_actions = _ilist(rollout.actions)
         _S.mpc_bandwidth = _f(rollout.predicted_bandwidth)
+        _S.draft_route = getattr(self, "last_route", None)   # hybrid: 'mpc'|'repeat-last'
+        _S.drafter_class = type(self).__name__
         return rollout
 
     def observe(self, *a, **kw):
@@ -228,6 +241,8 @@ def install(jsonl_path):
             "corrected": bool(delta["corrected_actions"]),
             "target_plm_called": bool(delta["target_plm_calls"]),
             "predicted_bandwidth": _S.mpc_bandwidth,
+            "drafter_class": _S.drafter_class,
+            "draft_route": _S.draft_route,
             "latency_ms": lat_ms,
             "cpu_ms": cpu_ms,
             "mpc_rollout_cpu_ms": (None if _S.mpc_cpu_s is None

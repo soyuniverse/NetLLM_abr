@@ -64,15 +64,37 @@ def main():
     c_serve = mean(r["latency_ms"] for r in serves)
     c_fall = mean(r["latency_ms"] for r in falls)
     c_plain = args.baseline_latency_ms
+    q_now = len(serves) / n
+
+    # ---- queue supply actually produced, and how much of it survived --------
+    if not verify or c_verify is None or c_serve is None:
+        # No draft+verify step carried a draft action array, or no queue was
+        # ever served (e.g. a trace that predates the BaseDraftGenerator patch).
+        # Emit what stage labels alone support and skip the supply/scenario model.
+        report = {
+            "label": args.label, "source": args.jsonl,
+            "decisions": n, "verify": len(verify), "queue_serves": len(serves),
+            "fallbacks": len(falls),
+            "cost_ms": {"verify_call": c_verify, "queue_serve": c_serve,
+                        "fallback_call": c_fall, "baseline_plain_call": c_plain},
+            "queue_serve_share": {"observed": q_now},
+            "note": ("draft-action arrays and/or queue serves absent -- "
+                     "queue-supply / scenario model skipped; the observed q and "
+                     "the per-stage costs above are still valid."),
+        }
+        out = Path(args.out_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / f"breakeven_{args.label}.json").write_text(
+            json.dumps(report, indent=2, sort_keys=True))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return
 
     def q_for(target_ms):
         return (c_verify - target_ms) / (c_verify - c_serve)
 
-    q_now = len(serves) / n
     q_parity = q_for(c_plain)
     q_target = q_for(c_plain / args.speedup_target)
 
-    # ---- queue supply actually produced, and how much of it survived --------
     k = max(len(r["mpc_draft_actions"]) for r in verify)
     entries_avail = []           # entries left in the queue after the pop
     for r in verify:

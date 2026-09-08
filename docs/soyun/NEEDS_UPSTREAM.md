@@ -127,3 +127,33 @@ Format per entry:
   `selection_layout.py` author (Token selector module owner).
 - **Status:** open. **Blocks 1 of the 6 README conditions**; the other five are
   measured in [[BASELINE6]].
+
+---
+
+## 5. `--speculative-draft-steps` is capped at 5 in read-only `run_plm.py`
+
+- **Date:** 2026-09-08
+- **File / area:** `adaptive_bitrate_streaming/run_plm.py:298-299`
+  `if not 0 <= args.speculative_draft_steps <= 5: raise ValueError(...)`.
+  **Read-only for soyun** (team-owned, HANDOFF §2.5). A second cap
+  `1 <= max_horizon <= 5` sits in `plm_special/speculative/mpc_draft.py:190`
+  (`BaseDraftGenerator.__init__`) — soyun-owned but frozen for the drafter
+  ablation.
+- **Why it's needed (speculative-inference context):** DRAFTER_ABLATION's stated
+  core is testing draft length `k` past the point where MPC's `6^k` brute force
+  becomes the budget (SWEEP_SPEC §4: MPC CPU is already 1.90 % of latency at
+  k=5, extrapolated ≈ 39 ms at k=8, i.e. ≈ one LLM call). The zero-search
+  drafters (`repeat-last`, `hybrid`'s repeat branch) have **no** `6^k` cost, so
+  k=8 is exactly the regime where a working drafter should pull ahead — but the
+  `run_plm.py` guard refuses `--speculative-draft-steps 8` before the wrapper
+  can act, and it cannot be lifted without editing a team file.
+- **Proposed change:** raise the `run_plm.py` ceiling (e.g. to 10, or make it
+  configurable) and correspondingly relax `BaseDraftGenerator.__init__`'s
+  `max_horizon` check. Guard against `6^k` blow-up for the `mpc` drafter
+  specifically (cap mpc's own horizon, or switch mpc to beam search) rather than
+  capping every drafter at 5.
+- **Owner to contact:** `run_plm.py` / speculative-CLI owner (team lead opened
+  `plm_special/speculative/` to soyun on 2026-09-02; the `run_plm.py` guard was
+  not part of that).
+- **Status:** open. **DRAFTER_ABLATION runs k ∈ {3, 5} only** — k=5 is the hard
+  ceiling of the current execution path. k=8 deferred to this item.
