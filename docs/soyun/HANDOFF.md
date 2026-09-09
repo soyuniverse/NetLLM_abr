@@ -140,16 +140,26 @@ reference. Two frozen-path issues were found and fixed *before* the freeze
 (DRAFTER_ABLATION §0): `decision_trace.py` did not instrument repeat-last/hybrid,
 and k=8 is impossible without editing read-only `run_plm.py`.
 
-### Action 4 — safety follow-ups + upstream (no GPU / needs approval)
+### Action 4 — serve-gate investigation — DONE 2026-09-09 (§8–§9, [[SERVE_GATE_DIAGNOSIS]])
 
-- **DRAFTER_ABLATION §S.7** — the conditional-success verdict needs: execution-time
-  buffer recheck on queue entries, no queue-serve below 5 s buffer, buffer
-  tolerance re-tune. All touch `plm_special/speculative/` + `rl_policy` →
-  team-lead approval, then a fresh ablation.
-- **[[NEEDS_UPSTREAM]] #5** — raise the `run_plm.py:298` draft-steps cap so k=8
-  (the zero-search-drafter regime) can be measured.
-- **[[NEEDS_UPSTREAM]] #4** — `recent-timestep` fp16 NaN still blocks 1 of the 6
-  README conditions; not soyun's to fix.
+All three §S.7 prescriptions were prototyped from `abr_spec/` (monkeypatch, no
+team file). The serve gate does not generalise; one 4/4 config found
+(`v_hybrid_k5_f5_cons`). [[CHANGE_REQUEST_SERVE_TIME_GATE]] awaits review.
+
+### Action 5 — remaining, in priority order
+
+1. **Draft-time drain-aware enqueue (the general fix).** `sample_speculative`'s
+   enqueue loop / the drafter should skip a queue entry whose `rollout.
+   predicted_buffers` dips below a floor. Touches `plm_special/speculative/
+   mpc_draft.py` + `rl_policy.py` — scope a second change request. Would protect
+   every drafter, unlike the serve gate.
+2. **`v_hybrid_k5_f5_cons` robustness** — one seed, one trace set. If it is to be
+   the operating point, re-run across seeds 2/3/4 and confirm the trace-94
+   cascade fix is not seed-luck (~15 min GPU).
+3. **[[NEEDS_UPSTREAM]] #4** — `recent-timestep` fp16 NaN still blocks 1 of the 6
+   README conditions; not soyun's to fix.
+- **[[NEEDS_UPSTREAM]] #5** (k=8 cap) — LOW PRIORITY: speedup *decreases* k3→k5,
+  so k=8 buys nothing for this drafter family.
 
 ### Not planned unless asked
 
