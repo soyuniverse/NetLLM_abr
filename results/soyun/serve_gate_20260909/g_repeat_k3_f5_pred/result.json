@@ -1,0 +1,70 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 249.88,
+  "timing": {
+    "wall_seconds": 249.88,
+    "test_on_env_time_s": [
+      245.513
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 51.832406441061856,
+    "inference_latency_p50_ms": 60.52177050150931,
+    "inference_latency_p95_ms": 99.33262914419174,
+    "target_plm_calls": 2921,
+    "llm_call_reduction_ratio": 0.37851063829787235,
+    "draft_attempts": 2027,
+    "drafted_actions": 5948,
+    "accepted_actions": 4633,
+    "corrected_actions": 634,
+    "acceptance_rate": 0.7789172831203766,
+    "executed_speculative_actions": 3806,
+    "queued_actions_served": 1779,
+    "pending_actions": 0,
+    "fallback_calls": 894,
+    "state_mismatch_fallbacks": 894,
+    "buffer_mismatch_fallbacks": 733,
+    "feature_mismatch_fallbacks": 161,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9126378649790114,
+    "mean_reward": 0.9126378649790114,
+    "mean_bitrate_mbps": 1.0258829787234043,
+    "mean_rebuffer_s_per_chunk": 0.01081405416123932,
+    "total_rebuffer_s": 50.826054557824804,
+    "mean_smoothness_mbps": 0.06674468085106385,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 3,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/serve_gate_20260909/g_repeat_k3_f5_pred/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/serve_gate_20260909/g_repeat_k3_f5_pred/console.log",
+  "decision_trace": {
+    "path": "results/soyun/serve_gate_20260909/g_repeat_k3_f5_pred/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "repeat-last",
+    "patched": true,
+    "buffer_threshold": null,
+    "cv_threshold": null,
+    "class": "RepeatLastDraftGenerator"
+  },
+  "serve_gate": {
+    "gate": "serve-buffer-floor",
+    "floor_seconds": 5.0,
+    "check_predicted": true,
+    "patched": true
+  }
+}

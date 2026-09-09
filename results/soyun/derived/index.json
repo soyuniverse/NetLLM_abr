@@ -28,6 +28,22 @@
    "source_bytes": 39424568,
    "source_lines": 32900,
    "summary_bytes": 61568
+  },
+  "serve_gate_20260909": {
+   "file": "serve_gate_20260909_summary.json",
+   "phases": [
+    "g_hybrid_k3_f5",
+    "g_hybrid_k5_f5",
+    "g_repeat_k3_f3",
+    "g_repeat_k3_f5",
+    "g_repeat_k3_f5_pred",
+    "g_repeat_k3_f8",
+    "g_repeat_k5_f5",
+    "t_repeat_k3_btol0p5"
+   ],
+   "source_bytes": 44613728,
+   "source_lines": 37600,
+   "summary_bytes": 70523
   }
  },
  "schema_version": 2
