@@ -477,7 +477,7 @@ monkeypatch 패턴으로 **abr_spec/ 에서 가로챌 수 있다** — 팀 파�
 
 ### 8.1 동결 (이번 실험)
 
-- **Freeze commit:** `0b3005248f558f2d455a9c7a34a8be33265cb330` — `feat(soyun): serve_gate.py + --serve-buffer-floor`.
+- **Freeze commit:** `79095d46cdbe21f01c7c2e70c0f59097e7b823cd` — `feat(soyun): serve_gate.py + --serve-buffer-floor`.
 - freeze 직전 변경(둘 다 abr_spec/, 팀 파일 무수정): `serve_gate.py` 신규,
   `run_wrapped.py` 플래그 2개(+manifest 기록). 40-test 통과, `run_drafter_ablation.sh
   --dry-run` clean, drafter_ab 실행경로(ablation freeze `0d137ce`) 대비 diff empty
