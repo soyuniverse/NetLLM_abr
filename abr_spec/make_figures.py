@@ -362,19 +362,21 @@ def fig5(out_dir):
         Line2D([], [], marker="o", ls="", mfc="0.6", mec="black", label="v1 fallback"),
         Line2D([], [], marker="s", ls="", mfc="0.6", mec="black", label="v2 conservative"),
         Line2D([], [], marker="^", ls="", mfc="0.6", mec="black", label="v2 safe-mode"),
-        Line2D([], [], marker="s", ls="", mfc="black", mec="black", label="4/4 criteria"),
+        Line2D([], [], marker="s", ls="", mfc="black", mec="black", label="4/4 at seed 1 only"),
     ], fontsize=6, loc="lower right")
     save(fig, out_dir, "fig5_serve_gate_tradeoff",
-         "Figure 5. The serve-time buffer gate. Left: total rebuffering vs the "
-         "gate's buffer-floor threshold (0 = no gate), one line per drafter x "
-         "response mode. v1 'fallback' (demote to an LLM call) makes rebuffering "
-         "worse for every drafter except hybrid k5; v2 'conservative' (serve one "
-         "quality level down, deterministic, no LLM) on hybrid k5 drops "
-         "rebuffering below A1's; v2 'safe-mode' (force every low-buffer decision) "
-         "over-corrects. Right: speedup vs rebuffering for all configs. The one "
-         "config meeting all four pre-fixed criteria is hybrid k5 + v2 "
-         "conservative + floor 5 s (filled square): rebuffering 1.6 s, QoE "
-         "-0.05 % vs A1, speedup 1.50x.")
+         "Figure 5. The serve-time buffer gate, all at --seed 1. Left: total "
+         "rebuffering vs the gate's buffer-floor threshold (0 = no gate), one "
+         "line per drafter x response mode. v1 'fallback' (demote to an LLM "
+         "call) makes rebuffering worse for every drafter except hybrid k5; v2 "
+         "'conservative' (serve one quality level down, no LLM) on hybrid k5 "
+         "drops rebuffering to 1.6 s; v2 'safe-mode' over-corrects. Right: "
+         "speedup vs rebuffering. The one hybrid k5 + conservative + floor 5 s "
+         "point (filled square) passes all four seed-1 criteria -- BUT this does "
+         "not survive seeds 2-4 (help 1 / inert 2 / hurt 1) or per-episode "
+         "re-seeding (1 decision changed, 0 s rebuffer effect): the seed-1 win "
+         "is a coincidental trip/cascade alignment (DRAFTER_ABLATION section "
+         "9.9-9.11, TRAJECTORY_DIVERGENCE).")
 
 
 
