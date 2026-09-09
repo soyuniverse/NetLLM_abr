@@ -36,11 +36,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rid", default="drafter_ab_20260908")
     ap.add_argument("--phases", nargs="*", default=PHASES)
+    ap.add_argument("--a1-rid", default=None,
+                    help="run-id holding a1_all_off for the speedup/QoE reference "
+                         "(default: --rid). Use when a gate run reuses an earlier "
+                         "instance's A1.")
     args = ap.parse_args()
     root = REPO / "results" / "soyun" / args.rid
     A = root / "analysis"
+    a1_root = REPO / "results" / "soyun" / (args.a1_rid or args.rid)
 
-    a1 = jload(root / "a1_all_off" / "selector_metrics.json")
+    a1 = jload(a1_root / "a1_all_off" / "selector_metrics.json")
     a1_lat = a1.get("inference_latency_mean_ms")
     a1_qoe = a1.get("qoe_raw_mean")
     a1_reb = a1.get("total_rebuffer_s")

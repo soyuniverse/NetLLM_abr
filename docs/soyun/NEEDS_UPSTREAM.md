@@ -155,5 +155,23 @@ Format per entry:
 - **Owner to contact:** `run_plm.py` / speculative-CLI owner (team lead opened
   `plm_special/speculative/` to soyun on 2026-09-02; the `run_plm.py` guard was
   not part of that).
-- **Status:** open. **DRAFTER_ABLATION runs k ∈ {3, 5} only** — k=5 is the hard
-  ceiling of the current execution path. k=8 deferred to this item.
+- **Status:** **LOW PRIORITY — likely will not pursue** (re-evaluated 2026-09-09,
+  DRAFTER_ABLATION §10). The k axis was expected to *help* the zero-search
+  drafters. It does the opposite:
+
+  | | speedup | q | QoE Δ vs A1 | rebuffer tot |
+  |---|---:|---:|---:|---:|
+  | repeat-last k3 (m2) | **1.419×** | 37.8 % | −1.5 % | 23.8 s |
+  | repeat-last k5 (m4) | 1.306× | 41.9 % | −4.0 % | 37.1 s |
+  | hybrid k3 (m3) | **1.413×** | 37.3 % | −1.8 % | 26.9 s |
+  | hybrid k5 (m5) | 1.326× | 41.9 % | −2.0 % | 18.5 s |
+
+  **speedup *decreases* from k3 to k5** for both drafters: `q` rises only
+  4 pp (38→42 %) while the verification context grows fast enough
+  (`c_verify` 91→112 ms, SWEEP_SPEC §12.3) to more than eat it. QoE and
+  rebuffering both worsen monotonically with k. So k=8 would give **less**
+  speedup than k=3 and **worse** QoE/rebuffering — the k axis peaks at k=3 for
+  this drafter family, and lifting the cap buys nothing. Re-open only if a future
+  drafter changes the `q`-vs-context trade (e.g. a drafter whose accepted prefix
+  keeps growing with k without the context penalty).
+- **DRAFTER_ABLATION ran k ∈ {3, 5}**; k=3 is the operating point.
