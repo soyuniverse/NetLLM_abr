@@ -38,6 +38,17 @@ drafter (직전 행동을 k번 반복) 가 LLM 의 다음 행동을 step-1 에�
 인스턴스 상수**(구 14.63 %, 신 ~11 %)이고 **k=5 부터 fallback 항이 필요**하다
 (zero-search drafter 는 draft 를 거를 수 없어 fallback 지분이 21 %까지 오른다).
 
+**serve-time 안전 게이트 (§8–§9, 2026-09-09).** §S.7 이 요구한 세 처방 전부 팀
+파일 없이 abr_spec/ monkeypatch 로 검증 가능함을 확인했다 (Task 0, §8). 게이트
+자체는 **hybrid k5 에서만** 효과가 있고 — 그 조건의 무방비 실패가 한 trace 의
+13 s rebuffer 캐스케이드로 집중돼 있어서다 — 다른 drafter/k 에서는 2–3개 결정
+교란이 폐루프를 더 나쁜 궤적으로 옮긴다 ([[SERVE_GATE_DIAGNOSIS]]). **배치 후보:
+`v_hybrid_k5_f5_cons` = hybrid k5 + serve gate(mode `conservative`, floor 5 s).**
+4개 사전 판정 기준 전부 통과: rebuffering 18.5 → **1.64 s** (A1 6.4 s 의 0.26×),
+QoE −1.97 → **−0.05 %**, speedup **1.499×** (same-session 대조 1.522× 대비 −1.5 %),
+incidence 0.559 → 0.306 %. 좁고 표적화된 패치이며, 일반 해법은 drafter 가 예측
+drain 을 못 넘는 draft 를 애초에 enqueue 하지 않는 것 (§9.8, [[CHANGE_REQUEST_SERVE_TIME_GATE]] §7).
+
 ---
 
 ## 0. 실행 경로 동결 (Task 0)
@@ -491,6 +502,13 @@ monkeypatch 패턴으로 **abr_spec/ 에서 가로챌 수 있다** — 팀 파�
   — 즉 게이트 off (`--serve-buffer-floor 0`, 기본값) 시 경로 불변.
 - 실행경로 파일(`run_wrapped.py`, `decision_trace.py`, `drafter_select.py`,
   `serve_gate.py`, `plm_special/speculative/*`)은 batch 1 중 수정 없음.
+
+**batch 2·3 동결:** `83704a6` (`feat(soyun): serve_gate v2 — conservative /
+safe-mode`). batch 1 freeze 대비 `run_wrapped.py` 에 `--serve-gate-mode` /
+`--serve-gate-step` 플래그 2개, `serve_gate.py` 에 conservative·safe-mode 응답
+추가 (모두 abr_spec/, 팀 파일 무수정, 게이트 off 시 경로 불변, 40-test 통과).
+일부 phase 는 `a311daf`(CHANGE_REQUEST 문서만) 를 `manifest_phase.json` 에
+기록 — `83704a6`↔`a311daf` 실행경로 diff empty 로 확인.
 
 ## 9. Task 1 — serve-time 버퍼 게이트 (batch 1: demote-to-LLM)
 

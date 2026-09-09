@@ -31,19 +31,23 @@ rebuffering rises from A1's 6.4 s to 18–37 s (§9). §S.6 localises the cause 
 handful of queue entries execute after the buffer has drained below ~5 s, drafted
 several chunks earlier when the buffer was comfortable. The gate refuses those.
 
-## 2. What the measurements say (`results/soyun/serve_gate_20260909/`)
+## 2. What the measurements say (`results/soyun/serve_gate_20260909/`, 22 runs)
 
-- **The gate is drafter-dependent** (§9.1). It helps only `hybrid k5`, whose
-  unprotected `< 5 s` queue serves directly caused 10.2 s of rebuffering; for
-  every other drafter/k the same gate makes rebuffering worse.
-- **`hybrid k5 + gate, floor 5 s` is the one 4/4 config** (§9.3): total
-  rebuffering 18.5 → 7.0 s (Δ vs A1 +0.6 s), QoE −2.0 → −1.3 %, speedup 1.47×,
-  incidence 0.56 → 0.26 %.
-- **The `mode=fallback` response (demote to an LLM call) is a dead end**
+- **The gate is drafter-dependent** (§9). It helps only `hybrid k5`, whose
+  unprotected `< 5 s` queue serves caused a 13 s rebuffer cascade on one trace;
+  for every other drafter/k the same gate makes rebuffering worse.
+- **`mode=fallback` (demote to an LLM call) is a dead end**
   ([[SERVE_GATE_DIAGNOSIS]]): the sample-mode LLM picks an unsafe bitrate in a
-  drained buffer and perturbing 3–5 decisions diverges the closed loop.
-  **`mode=conservative` / `mode=safe-mode`** (serve a deterministic low bitrate,
-  no LLM) is the direction — results in §9.6 `<FILL from batch 2>`.
+  drained buffer (repeat k5 gate trip: action 4 at buffer 4.0 s → 12.6 s
+  rebuffer), and perturbing 2–5 decisions diverges the closed loop.
+- **`mode=conservative` (serve one quality level down, deterministic, no LLM)
+  on hybrid k5 + floor 5 s is the one 4/4 config** (§9.8): rebuffering 18.5 →
+  **1.64 s** (Δ vs A1 −4.8 s), QoE −1.97 → **−0.05 %**, speedup **1.499×**,
+  incidence 0.56 → 0.31 %. Only 3 gate trips.
+- **`mode=safe-mode`** (force every low-buffer decision) over-corrects (115–261
+  trips) and fails everywhere. **`conservative` does not generalise** to
+  hybrid k3 (rebuffering 26.9 → 58.3 s — trajectory divergence) or repeat k3/k5
+  (neutral).
 
 ## 3. The ask — minimal diff (~11 lines, 3 files; team files ≈ 6 lines)
 
@@ -144,11 +148,31 @@ If §3 is declined, the disposition is: *`--serve-buffer-floor` lives on the
 wrapper, like `--speculative-drafter`* — and this document is closed as
 acknowledged.
 
-## 7. Recommended default
+## 7. Recommended default and the general fix
 
-`<FILL after DRAFTER_ABLATION §9.6 (batch 2) names the winning mode/floor. Batch 1
-already gives one 4/4 config: hybrid k5 + mode=fallback + floor 5 s. If v2
-conservative/safe-mode generalises to hybrid k3 as well, that becomes the
-recommendation instead.>`
+**The gate stays opt-in** (`--speculative-serve-buffer-floor 0`, `mode=fallback`
+in §3). It is **not** a general safety fix — see §2 and
+[[SERVE_GATE_DIAGNOSIS]]. The one configuration that passes all four judgement
+criteria (DRAFTER_ABLATION §9.8) is narrow:
 
-*The default in §3 is `0.0` / `fallback` regardless — the gate is opt-in.*
+| | value |
+|---|---|
+| drafter | `hybrid`, k = 5 (`--speculative-draft-steps 5`, `--speculative-hybrid-buffer-threshold 5.0`) |
+| gate | `--speculative-serve-buffer-floor 5.0 --speculative-serve-gate-mode conservative` |
+| result | rebuffering 18.5 → **1.64 s** (0.26× A1), QoE −1.97 → **−0.05 %**, speedup **1.499×** (−1.5 % vs the same-session control), incidence C 0.559 → 0.306 % |
+| why it works | that drafter/k's unprotected `< 5 s` queue serves caused a 13 s rebuffer cascade on one trace (stale-high queue); 3 conservative serves at the drain start prevent it |
+| why it does not generalise | the same gate raises hybrid k3's rebuffering 26.9 → 58.3 s (deterministic trajectory divergence from 2–3 perturbed decisions); floor must be **exactly** 5 s (3 s is a no-op, 8 s over-triggers); `safe-mode` over-corrects everywhere |
+
+So the `mode=conservative` follow-up diff to `rl_policy.py` (§3b, ~6 lines) is
+worth taking **only if the team also adopts hybrid k5 as the speculative
+operating point** — otherwise the useful default is still 0.
+
+**The general fix is at draft time, not serve time.** The root cause is that the
+drafter enqueues actions it cannot stand behind once the buffer drains. A
+principled fix: the drafter (or `sample_speculative`'s enqueue loop) should not
+enqueue a queue entry whose **predicted** buffer trajectory (`rollout.
+predicted_buffers`, already computed in `mpc_draft.simulate_actions`) dips below
+a floor. That is a `plm_special/speculative/mpc_draft.py` +
+`plm_special/models/rl_policy.py` change of similar size to §3, and it would
+protect every drafter, not just hybrid k5. soyun will scope it as a separate
+change request once this one's disposition is known.
