@@ -1,0 +1,74 @@
+{
+  "status": "ok",
+  "error": null,
+  "wall_seconds": 273.54,
+  "timing": {
+    "wall_seconds": 273.54,
+    "test_on_env_time_s": [
+      269.245
+    ]
+  },
+  "metrics": {
+    "inference_calls": 4700,
+    "inference_latency_mean_ms": 56.87621905730958,
+    "inference_latency_p50_ms": 62.05225648591295,
+    "inference_latency_p95_ms": 129.0770142164547,
+    "target_plm_calls": 2750,
+    "llm_call_reduction_ratio": 0.4148936170212766,
+    "draft_attempts": 1788,
+    "drafted_actions": 8545,
+    "accepted_actions": 5543,
+    "corrected_actions": 854,
+    "acceptance_rate": 0.648683440608543,
+    "executed_speculative_actions": 3737,
+    "queued_actions_served": 1949,
+    "pending_actions": 0,
+    "fallback_calls": 963,
+    "state_mismatch_fallbacks": 963,
+    "buffer_mismatch_fallbacks": 819,
+    "feature_mismatch_fallbacks": 144,
+    "return_mismatch_fallbacks": 0,
+    "draft_generation_failures": 0,
+    "throughput_predictor_updates": 4700,
+    "qoe_raw_mean": 0.9456357666548838,
+    "mean_reward": 0.9456357666548838,
+    "mean_bitrate_mbps": 1.0266063829787235,
+    "mean_rebuffer_s_per_chunk": 0.003914492663139328,
+    "total_rebuffer_s": 18.39811551675484,
+    "mean_smoothness_mbps": 0.06413829787234042,
+    "evaluated_video_chunks": 4700,
+    "token_reduction_ratio": 0.0,
+    "speculative_draft_steps": 5,
+    "speculative_verification_mode": "sample",
+    "speculative_buffer_tolerance": 1.0,
+    "speculative_state_tolerance": 0.25,
+    "speculative_return_tolerance": 0.01
+  },
+  "collected_result_files": [
+    "results/soyun/serve_gate_20260909/v_hybrid_k5_f5_cons_reseed/selector_metrics.json"
+  ],
+  "checkpoint_files": [],
+  "checkpoint_dir": "results/soyun/checkpoints/official_abr_r128",
+  "console_log": "results/soyun/serve_gate_20260909/v_hybrid_k5_f5_cons_reseed/console.log",
+  "decision_trace": {
+    "path": "results/soyun/serve_gate_20260909/v_hybrid_k5_f5_cons_reseed/decisions.jsonl",
+    "records": 4700
+  },
+  "drafter": {
+    "drafter": "hybrid",
+    "patched": true,
+    "buffer_threshold": 5.0,
+    "cv_threshold": 0.3,
+    "class": "HybridDraftGenerator"
+  },
+  "serve_gate": {
+    "gate": "serve-buffer-floor",
+    "floor_seconds": 5.0,
+    "check_predicted": false,
+    "mode": "conservative",
+    "step": 1,
+    "patched": true,
+    "gate_trips": 1,
+    "safe_serves": 1
+  }
+}

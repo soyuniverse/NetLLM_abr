@@ -42,12 +42,23 @@
     "m2_ctrl",
     "m3_ctrl",
     "m5_ctrl",
+    "m5_ctrl_reseed",
+    "m5_ctrl_s2",
+    "m5_ctrl_s3",
+    "m5_ctrl_s4",
     "t_repeat_k3_btol0p5",
     "v_hybrid_k3_f5_cons",
     "v_hybrid_k3_f5_safe",
     "v_hybrid_k3_f8_safe",
     "v_hybrid_k5_f3_cons",
     "v_hybrid_k5_f5_cons",
+    "v_hybrid_k5_f5_cons_reseed",
+    "v_hybrid_k5_f5_cons_s2",
+    "v_hybrid_k5_f5_cons_s3",
+    "v_hybrid_k5_f5_cons_s4",
+    "v_hybrid_k5_f5_fb_s2",
+    "v_hybrid_k5_f5_fb_s3",
+    "v_hybrid_k5_f5_fb_s4",
     "v_hybrid_k5_f5_safe",
     "v_hybrid_k5_f8_cons",
     "v_hybrid_k5_f8_safe",
@@ -55,9 +66,9 @@
     "v_repeat_k3_f5_safe",
     "v_repeat_k5_f5_cons"
    ],
-   "source_bytes": 121762234,
-   "source_lines": 102539,
-   "summary_bytes": 189651
+   "source_bytes": 183115695,
+   "source_lines": 154239,
+   "summary_bytes": 286580
   }
  },
  "schema_version": 2

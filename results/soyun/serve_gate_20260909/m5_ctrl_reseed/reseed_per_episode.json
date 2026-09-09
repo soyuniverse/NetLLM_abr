@@ -1,0 +1,6 @@
+{
+  "installed": true,
+  "base_seed": 1,
+  "episode": 100,
+  "reseeds": 100
+}

@@ -1,0 +1,65 @@
+{
+  "acceptance_rate_reference": {
+    "note": "acceptance_rate alone does not set the break-even: what buys latency is the queue-serve share q, which is acceptance x horizon x tolerance-survival.",
+    "observed_acceptance_rate": 0.6491289605986204,
+    "quoted_breakeven": 0.05
+  },
+  "cost_ms": {
+    "baseline_plain_call": 80.6269,
+    "draft_context_surcharge_ms": 9.851329661328052,
+    "draft_context_surcharge_pct": 12.218415518056693,
+    "fallback_call": 75.21661118580363,
+    "queue_serve": 1.8870582172132186,
+    "verify_call": 90.47822966132806
+  },
+  "decisions": 4700,
+  "fallbacks": 975,
+  "label": "v_hybrid_k5_f5_cons_s4",
+  "queue_serve_share": {
+    "multiple_needed_for_1.24x": 0.7004863753633154,
+    "multiple_needed_for_parity": 0.27107860143881823,
+    "needed_for_1.24x": 0.2873484535532919,
+    "needed_for_parity": 0.11119990288809395,
+    "observed": 0.4102127659574468
+  },
+  "queue_serves": 1928,
+  "queue_supply": {
+    "deepest_measured_realization": 0.5520614954577219,
+    "entries_per_verify_mpc": 2.5709515859766277,
+    "entries_per_verify_repeat_last": 2.731775180856984,
+    "entries_ratio_repeat_over_mpc": 1.0625541125541127,
+    "k": 5,
+    "realization_rate_by_queue_depth": {
+      "1": 0.5520614954577219,
+      "2": 0.42609413707679605,
+      "3": 0.34560906515580736,
+      "4": 0.27856365614798695
+    },
+    "realization_rate_flat": 0.4173160173160173
+  },
+  "scenarios": {
+    "mpc_measured": {
+      "entries_per_verify": 2.5709515859766277,
+      "predicted_latency_ms": 44.62486629374325,
+      "predicted_speedup_vs_baseline": 1.8067706795864285,
+      "queue_serve_share": 0.5175838926174496,
+      "realization_rate": 0.4173160173160173
+    },
+    "repeat_last_depthwise_r": {
+      "entries_per_verify": 2.731775180856984,
+      "predicted_latency_ms": 43.254201801322594,
+      "predicted_speedup_vs_baseline": 1.8640246875977413,
+      "queue_serve_share": 0.5330556881708621,
+      "realization_rate": 0.41789053786602715
+    },
+    "repeat_last_flat_r": {
+      "entries_per_verify": 2.731775180856984,
+      "predicted_latency_ms": 43.284539982138476,
+      "predicted_speedup_vs_baseline": 1.8627181906812684,
+      "queue_serve_share": 0.5327132366565481,
+      "realization_rate": 0.4173160173160173
+    }
+  },
+  "source": "results/soyun/serve_gate_20260909/v_hybrid_k5_f5_cons_s4/decisions.jsonl",
+  "verify": 1797
+}
