@@ -1,6 +1,6 @@
 # HANDOFF — read this file first
 
-**soyun / speculative inference · branch `soyun/spec-abr` · last updated 2026-09-08**
+**soyun / speculative inference · branch `soyun/spec-abr` · last updated 2026-09-09**
 
 If you are a new instance or a resumed session: **this file alone should restore
 the context.** Everything referenced here is committed.
@@ -10,9 +10,20 @@ clear speedup 1.0× and 1.24× (the lines the parameter sweep could not reach) �
 repeat-last k3 = **1.419×** at q 37.8 %, draft/LLM 1-step agreement **88 %** (mpc
 13 %). Verdict is **conditional**: rebuffering rises 2.9–5.8× A1. Full writeup
 [[DRAFTER_ABLATION]], cost-model update [[SWEEP_SPEC]] §12. Freeze commit
-`0d137ce`, results `results/soyun/drafter_ab_20260908/`. Next: the safety
-follow-ups in DRAFTER_ABLATION §S.7 (need `plm_special/speculative/` + rl_policy
-changes → team-lead approval), and [[NEEDS_UPSTREAM]] #5 (raise the k cap for k=8).
+`0d137ce`, results `results/soyun/drafter_ab_20260908/`.
+
+**2026-09-09: serve-time safety gate investigated (§8–§9, `serve_gate_20260909/`,
+22 runs, freeze `83704a6`).** Task 0 found all three §S.7 prescriptions are
+doable from `abr_spec/` by monkeypatch — **no team file, no `speculative/`
+edit** (`abr_spec/serve_gate.py`, same pattern as `--speculative-drafter`).
+The gate is **not** a general fix ([[SERVE_GATE_DIAGNOSIS]]): demote-to-LLM
+backfires (unsafe LLM sample + closed-loop divergence), and even a deterministic
+conservative serve only helps the one config whose unprotected failure was a
+concentrated cascade. **One 4/4 config: `v_hybrid_k5_f5_cons`** — hybrid k5 +
+serve gate (`conservative`, floor 5 s): rebuffering 18.5 → 1.64 s, QoE −0.05 %,
+speedup 1.499×. [[CHANGE_REQUEST_SERVE_TIME_GATE]] is the promotion request; the
+general fix is at draft time (don't enqueue what won't survive a predicted
+drain). [[NEEDS_UPSTREAM]] #5 (k cap) downgraded to low priority.
 
 ---
 
