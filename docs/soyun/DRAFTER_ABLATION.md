@@ -766,3 +766,30 @@ rebuffering 영향 0**. 캐스케이드가 trace 94 → 53 으로 이동했고 �
 seeding 이 없앤다. 제대로 재면 serve-time 게이트는 **무효** — 문제가 있는 자리에
 있질 않다. 실제 해법은 draft-time([[CHANGE_REQUEST_SERVE_TIME_GATE]] §7)과 eval
 harness([[NEEDS_UPSTREAM]] #6). 상세 [[TRAJECTORY_DIVERGENCE]] §6.
+
+### 9.12 자기 점검 — drafter ablation 자체는 오염에 견고한가 (2026-09-09)
+
+`m1a`(mpc 통제) · `m2`(repeat-last k3, 헤드라인) · `A1`(비speculative)을
+`--probe reseed_per_episode` 로 seed 1 재실행 (`results/soyun/rng_audit_20260909/`,
+`abr_spec/run_rng_audit.sh`, 실행경로 freeze `0d137ce` 와 동일). 전체 표·기전은
+[[RNG_CONTAMINATION_AUDIT]] §3.
+
+| | speedup vs 같은-세션 A1 | q | 1-step | ΔQoE % | rebuf (s) |
+|---|---:|---:|---:|---:|---:|
+| seed-once m1a | 0.97× | 7.4 % | 16.3 % | +0.8 | 7.48 |
+| seed-once m2  | **1.42×** | 37.8 % | 88.0 % | −1.5 | 23.85 |
+| reseed/ep m1a | 1.07× | 7.0 % | 16.6 % | −1.5 | 50.98 |
+| reseed/ep m2  | **1.53×** | 38.3 % | 88.1 % | +0.2 | 13.87 |
+
+- **헤드라인(speedup·q·1-step)은 오염에 견고 — 확정.** m2 speedup 1.42→1.53×,
+  m2/m1a 비 1.46→1.43×, q·1-step 사실상 불변. RNG 스트림 위치는 지연·q·수용률에
+  영향 없음(그건 정책의 행동 자기상관이 정한다).
+- **조건부-성공의 QoE·rebuffering 비용 부분은 견고하지 않다 — 부호가 뒤집힌다.**
+  m2 ΔQoE −1.5 % → **+0.2 %**, rebuffering 23.85 s → **13.87 s** (reseed A1 의
+  19.10 s 보다 낮음). 원인은 §9.9 seed 복권: reseed 에서는 m1a·m2 둘 다 **trace
+  74**(seed 75) 하나가 총량을 지배(m1a 44.9 s / m2 12.7 s), seed-once 에서는 다른
+  trace 들이 지배했다. n=1 seed 로는 QoE·rebuffering 비용을 잴 수 없고 부호도
+  안 정해진다.
+- **판정:** §2 의 speedup 결론은 재해석 불필요. §S / 본 문서의 rebuffering·QoE
+  수치는 **"seed 1 점추정, 부호 불안정"** 단서를 달고, [[PAPER_ASSETS_ABR]] G1
+  (m2/m3/m4/m5/M6 × seed 2–4, mean±σ, ~75 분)이 선행돼야 논문 진술 가능.

@@ -1,0 +1,259 @@
+{
+  "run_id": "rng_audit_20260909",
+  "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+  "instance_changed": true,
+  "prior_run_gpus": {
+    "baseline6_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "determinism_20260908": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "drafter_ab_20260908": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "serve_gate_20260909": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "smoke_ckpt_1ep_20260831": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+    ],
+    "smoke_spec_a_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "smoke_spec_b_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "sweep_spec_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "trace_smoke_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ]
+  },
+  "phases": [
+    {
+      "phase": "m1a_mpc_k3_reseed",
+      "utc": "2026-09-09T22:31:02.584093+00:00",
+      "status": "ok",
+      "error": null,
+      "wall_seconds": 344.64,
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "100",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "metrics": {
+        "inference_calls": 4700,
+        "inference_latency_mean_ms": 71.97913886714191,
+        "inference_latency_p50_ms": 81.55921299476177,
+        "inference_latency_p95_ms": 88.6061712517403,
+        "target_plm_calls": 4370,
+        "llm_call_reduction_ratio": 0.07021276595744685,
+        "draft_attempts": 4021,
+        "drafted_actions": 11797,
+        "accepted_actions": 904,
+        "corrected_actions": 3919,
+        "acceptance_rate": 0.0766296516063406,
+        "executed_speculative_actions": 4351,
+        "queued_actions_served": 330,
+        "pending_actions": 0,
+        "fallback_calls": 349,
+        "state_mismatch_fallbacks": 349,
+        "buffer_mismatch_fallbacks": 310,
+        "feature_mismatch_fallbacks": 39,
+        "return_mismatch_fallbacks": 0,
+        "draft_generation_failures": 0,
+        "throughput_predictor_updates": 4700,
+        "qoe_raw_mean": 0.9273606707184084,
+        "mean_reward": 0.9273606707184084,
+        "mean_bitrate_mbps": 1.037308510638298,
+        "mean_rebuffer_s_per_chunk": 0.010846355646881764,
+        "total_rebuffer_s": 50.97787154034429,
+        "mean_smoothness_mbps": 0.06330851063829787,
+        "evaluated_video_chunks": 4700,
+        "token_reduction_ratio": 0.0,
+        "speculative_draft_steps": 3,
+        "speculative_verification_mode": "sample",
+        "speculative_buffer_tolerance": 1.0,
+        "speculative_state_tolerance": 0.25,
+        "speculative_return_tolerance": 0.01
+      }
+    },
+    {
+      "phase": "m2_repeat_k3_reseed",
+      "utc": "2026-09-09T22:36:50.529063+00:00",
+      "status": "ok",
+      "error": null,
+      "wall_seconds": 243.81,
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "100",
+        "video": "video1",
+        "speculative_draft_steps": "3",
+        "speculative_verification_mode": "sample",
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "metrics": {
+        "inference_calls": 4700,
+        "inference_latency_mean_ms": 50.515183200812004,
+        "inference_latency_p50_ms": 62.59870401117951,
+        "inference_latency_p95_ms": 95.99648241419345,
+        "target_plm_calls": 2899,
+        "llm_call_reduction_ratio": 0.3831914893617021,
+        "draft_attempts": 2007,
+        "drafted_actions": 5881,
+        "accepted_actions": 4724,
+        "corrected_actions": 560,
+        "acceptance_rate": 0.8032647508927053,
+        "executed_speculative_actions": 3808,
+        "queued_actions_served": 1801,
+        "pending_actions": 0,
+        "fallback_calls": 892,
+        "state_mismatch_fallbacks": 892,
+        "buffer_mismatch_fallbacks": 751,
+        "feature_mismatch_fallbacks": 141,
+        "return_mismatch_fallbacks": 0,
+        "draft_generation_failures": 0,
+        "throughput_predictor_updates": 4700,
+        "qoe_raw_mean": 0.942940000883466,
+        "mean_reward": 0.942940000883466,
+        "mean_bitrate_mbps": 1.0147340425531914,
+        "mean_rebuffer_s_per_chunk": 0.002950618300233019,
+        "total_rebuffer_s": 13.867906011095188,
+        "mean_smoothness_mbps": 0.05910638297872341,
+        "evaluated_video_chunks": 4700,
+        "token_reduction_ratio": 0.0,
+        "speculative_draft_steps": 3,
+        "speculative_verification_mode": "sample",
+        "speculative_buffer_tolerance": 1.0,
+        "speculative_state_tolerance": 0.25,
+        "speculative_return_tolerance": 0.01
+      }
+    },
+    {
+      "phase": "a1_reseed",
+      "utc": "2026-09-09T22:42:30.861010+00:00",
+      "status": "ok",
+      "error": null,
+      "wall_seconds": 369.59,
+      "parsed": {
+        "adapt": false,
+        "test": true,
+        "fixed_order": true,
+        "rank": "128",
+        "num_epochs": null,
+        "eval_per_epoch": null,
+        "trace": "fcc-test",
+        "trace_num": "100",
+        "video": "video1",
+        "speculative_draft_steps": "0",
+        "speculative_verification_mode": null,
+        "temporal_selector": "none",
+        "token_selector": "none"
+      },
+      "metrics": {
+        "inference_calls": 4700,
+        "inference_latency_mean_ms": 77.35624761749158,
+        "inference_latency_p50_ms": 83.0367169692181,
+        "inference_latency_p95_ms": 95.41278900578618,
+        "target_plm_calls": 4700,
+        "llm_call_reduction_ratio": 0.0,
+        "draft_attempts": 0,
+        "drafted_actions": 0,
+        "accepted_actions": 0,
+        "corrected_actions": 0,
+        "acceptance_rate": 0.0,
+        "executed_speculative_actions": 0,
+        "queued_actions_served": 0,
+        "pending_actions": 0,
+        "fallback_calls": 0,
+        "state_mismatch_fallbacks": 0,
+        "buffer_mismatch_fallbacks": 0,
+        "feature_mismatch_fallbacks": 0,
+        "return_mismatch_fallbacks": 0,
+        "draft_generation_failures": 0,
+        "throughput_predictor_updates": 0,
+        "qoe_raw_mean": 0.9411742326012666,
+        "mean_reward": 0.9411742326012666,
+        "mean_bitrate_mbps": 1.0213510638297874,
+        "mean_rebuffer_s_per_chunk": 0.004063884550917649,
+        "total_rebuffer_s": 19.10025738931295,
+        "mean_smoothness_mbps": 0.06270212765957447,
+        "evaluated_video_chunks": 4700,
+        "token_reduction_ratio": 0.0,
+        "speculative_draft_steps": 0,
+        "speculative_verification_mode": "sample",
+        "speculative_buffer_tolerance": 1.0,
+        "speculative_state_tolerance": 0.25,
+        "speculative_return_tolerance": 0.01
+      }
+    }
+  ],
+  "baseline": {
+    "baseline_run_id": "drafter_ab_20260908",
+    "baseline_phase_requested": "a1_all_off",
+    "latency_speedup_mean": 1.0422803067495652,
+    "baseline_gpu": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "baseline_phase": "a1_all_off",
+    "baseline_latency_ms": {
+      "inference_latency_mean_ms": 80.62689349575444,
+      "inference_latency_p50_ms": 84.84151802258566,
+      "inference_latency_p95_ms": 105.62806397792883
+    },
+    "per_phase": [
+      {
+        "phase": "m1a_mpc_k3_reseed",
+        "latency_ms": {
+          "inference_latency_mean_ms": 71.97913886714191,
+          "inference_latency_p50_ms": 81.55921299476177,
+          "inference_latency_p95_ms": 88.6061712517403
+        },
+        "speedup_mean": 1.1201425130213691,
+        "speedup_p50": 1.0402444421335295,
+        "speedup_p95": 1.1921073045558799
+      },
+      {
+        "phase": "m2_repeat_k3_reseed",
+        "latency_ms": {
+          "inference_latency_mean_ms": 50.515183200812004,
+          "inference_latency_p50_ms": 62.59870401117951,
+          "inference_latency_p95_ms": 95.99648241419345
+        },
+        "speedup_mean": 1.5960922714115469,
+        "speedup_p50": 1.355323873916524,
+        "speedup_p95": 1.1003326509629618
+      },
+      {
+        "phase": "a1_reseed",
+        "latency_ms": {
+          "inference_latency_mean_ms": 77.35624761749158,
+          "inference_latency_p50_ms": 83.0367169692181,
+          "inference_latency_p95_ms": 95.41278900578618
+        },
+        "speedup_mean": 1.0422803067495652,
+        "speedup_p50": 1.021734976035199,
+        "speedup_p95": 1.1070640013627855
+      }
+    ]
+  }
+}
