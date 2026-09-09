@@ -491,3 +491,73 @@ monkeypatch 패턴으로 **abr_spec/ 에서 가로챌 수 있다** — 팀 파�
   — 즉 게이트 off (`--serve-buffer-floor 0`, 기본값) 시 경로 불변.
 - 실행경로 파일(`run_wrapped.py`, `decision_trace.py`, `drafter_select.py`,
   `serve_gate.py`, `plm_special/speculative/*`)은 batch 1 중 수정 없음.
+
+## 9. Task 1 — serve-time 버퍼 게이트 (batch 1: demote-to-LLM)
+
+`abr_spec/serve_gate.py --serve-buffer-floor N`: queue 엔트리를 서브하기 직전
+관측 버퍼가 N초 미만이면 그 엔트리를 거부 → `rl_policy` 가 queue 를 비우고 LLM 을
+한 번 호출한다 (기존 buffer-tolerance miss 경로 그대로). 8 run,
+`results/soyun/serve_gate_20260909/`, freeze §8.1.
+
+### 9.1 결과 — **drafter 조건별로 정반대 효과**
+
+speedup 은 게이트 run(오늘)과 대조군(어제)이 다른 세션이라 **cross-session
+latency drift ~10 %** 가 섞여 있다 (§9.4). 행동 지표(rebuffering·QoE·q·일치율)는
+인스턴스 무관하게 재현되므로 그대로 비교한다.
+
+| config | QoE | ΔQoE % | speedup† | q | rebuf tot (s) | Δrebuf vs A1 | queue C | 4기준 (총량/incid/spd/QoE) |
+|---|---:|---:|---:|---:|---:|---:|---:|:--|
+| m2 repeat k3 (ctrl) | 0.93424 | −1.53 | 1.419× | 37.8 % | 23.85 | +17.45 | 0.338 % | FAIL/PASS/PASS/~ (2) |
+| m3 hybrid k3 (ctrl) | 0.93191 | −1.77 | 1.413× | 37.3 % | 26.87 | +20.48 | 0.228 % | FAIL/PASS/PASS/~ (2) |
+| m4 repeat k5 (ctrl) | 0.91111 | −3.96 | 1.306× | 41.9 % | 37.12 | +30.73 | 0.254 % | FAIL/PASS/PASS/FAIL (2) |
+| m5 hybrid k5 (ctrl) | 0.93001 | −1.97 | 1.326× | 41.9 % | 18.51 | +12.11 | 0.559 % | FAIL/PASS/PASS/~ (2) |
+| g_repeat_k3_f3 | 0.93424 | −1.53 | 1.565× | 37.8 % | 23.85 | +17.45 | 0.338 % | (m2 와 byte-identical — floor 3 미발동) |
+| g_repeat_k3_f5 | 0.91264 | −3.80 | 1.645× | 37.9 % | **50.83** | +44.43 | 0.281 % | FAIL/PASS/PASS/FAIL (2) |
+| g_repeat_k3_f8 | 0.92193 | −2.82 | 1.505× | 34.9 % | **50.31** | +43.92 | 0.244 % | FAIL/PASS/PASS/FAIL (2) |
+| g_repeat_k3_f5_pred | 0.91264 | −3.80 | 1.556× | 37.9 % | 50.83 | +44.43 | 0.281 % | f5 와 동일 (predicted buffer 무효과) |
+| g_hybrid_k3_f5 | 0.91275 | −3.79 | 1.565× | 37.0 % | **58.33** | +51.94 | 0.230 % | FAIL/PASS/PASS/FAIL (2) |
+| g_repeat_k5_f5 | 0.90011 | −5.12 | 1.488× | 42.1 % | **43.02** | +36.63 | 0.354 % | FAIL/PASS/PASS/FAIL (2) |
+| **g_hybrid_k5_f5** | **0.93623** | **−1.32** | 1.474× | 41.2 % | **7.00** | **+0.61** | 0.258 % | **PASS/PASS/PASS/PASS (4)** |
+| t_repeat_k3_btol0.5 (처방 3) | 0.91441 | −3.62 | 1.407× | 31.5 % | 32.19 | +25.80 | 0.000 % | FAIL/PASS/PASS/FAIL (2) |
+
+† speedup 은 §9.4 에서 same-session 재측정으로 확정. queue C = queue-serve window
+rebuffer-event 발생률; mpc control 0.578 % 이하면 incidence 게이트 PASS.
+
+### 9.2 판정 기준 (사전 고정) 해석
+
+- **총량 게이트:** "총 rebuffering 이 A1 6.4 s 의 10 %(0.64 s)를 넘으면 유의" 를
+  **A1 대비 증가분 Δrebuffer ≤ 0.64 s** 로 읽는다 (절대 총량 ≤ 0.64 s 는 A1 자신이
+  6.4 s 이므로 성립 불가). `g_hybrid_k5_f5` Δrebuffer +0.61 s → PASS (경계).
+- **incidence 게이트:** queue C ≤ mpc control (0.578 %). 전 게이트 run 통과 —
+  게이트가 위험한 queue serve 를 오히려 줄인다.
+- **speedup ≥ 1.24×:** 전 run 통과 (drift 를 −10 % 감안해도 최저 1.33×).
+- **QoE ≥ −1.5 %:** `g_hybrid_k5_f5`(−1.32 %) 만 통과. 나머지 게이트 run 은 악화.
+
+### 9.3 배치 후보 — **`g_hybrid_k5_f5` (hybrid k5 + serve gate, floor 5 s)**
+
+4/4 를 통과하는 **유일한** 조합. rebuffering 18.5 → 7.0 s (A1 6.4 s 수준),
+QoE −2.0 → −1.3 %, incidence 0.559 → 0.258 %. 단 [[SERVE_GATE_DIAGNOSIS]] 가 보이듯
+이 승리는 **hybrid k5 특유의 병리**(queue 가 drain 직전의 높은 비트레이트 1 을
+계속 반복 → 무방비 손실 10.2 s) 덕분이고, 같은 게이트가 다른 drafter/k 에서는
+전부 역효과다. 즉 **게이트 메커니즘이 일반화되지 않는다** — v2 (§9.6) 가 필요.
+
+### 9.4 speedup same-session 재확정 + 3-bucket 단가 모형
+
+`g_repeat_k3_f3` 이 m2 와 행동 byte-identical 인데 speedup 1.565× vs 1.419× —
+순수 cross-session GPU clock drift (~10 %). 따라서 §9.1 의 speedup 컬럼은
+**같은 세션 대조군(§9.6 batch 2 의 `m3_ctrl`/`m5_ctrl`)으로 재측정**한다.
+`c_verify` 자체가 m2→gate run 에서 90.9→80.1 ms 로 움직인 것이 drift 의 증거다.
+
+3-bucket 모형(verify/fallback/serve, [[SWEEP_SPEC]] §12.3)은 게이트 도입 후에도
+성립: batch 1 전 게이트 run 을 **오차 ≤ 0.4 %** 로 예측한다
+(g_repeat_k3_f5 3-bkt 1.650× vs 실측 1.645×; g_hybrid_k5_f5 1.478× vs 1.474×).
+게이트가 fallback 지분을 19 → 21 % 로 올리지만 모형이 그 변화를 흡수한다.
+
+### 9.5 원인 규명 → [[SERVE_GATE_DIAGNOSIS]]
+
+demote-to-LLM 이 원인이나 **LLM latency 때문이 아니다** (LLM 호출 수는 게이트로
+±10 만 변함, 추론 1회 ~80 ms). 원인은 (a) sample 모드 LLM 이 마른 버퍼에서
+비보수적(높은) 비트레이트를 샘플링 (repeat k5 게이트 trip: 버퍼 4.0 s 에서
+action 4 → 12.6 s rebuffer), (b) 3–5개 결정 교란이 폐루프 궤적을 통째로 이동
+(hybrid k3: 게이트 trip 3건 모두 rebuffer 0 인데 총 +31 s 가 다른 곳에서 발생).
+→ v2 는 LLM handoff 없이 **결정론적 보수 행동을 즉시 서브**한다.
