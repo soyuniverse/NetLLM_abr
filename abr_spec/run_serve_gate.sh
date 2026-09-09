@@ -66,6 +66,24 @@ PHASES=(
   "g_repeat_k3_f5_pred|--speculative-drafter repeat-last --serve-buffer-floor 5.0 --serve-gate-check-predicted|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
   # -- prescription 3: tighter buffer tolerance, no serve gate --------------
   "t_repeat_k3_btol0p5|--speculative-drafter repeat-last|--speculative-draft-steps 3 --speculative-verification-mode sample --speculative-buffer-tolerance 0.5 --speculative-state-tolerance 0.25 --speculative-return-tolerance 0.01"
+
+  # ======================================================================
+  # batch 2 (freeze 2): serve_gate v2 -- deterministic conservative serve,
+  # no LLM handoff (SERVE_GATE_DIAGNOSIS.md).  + fresh same-session controls
+  # so the speedup comparison is not cross-session (section 9.4).
+  # ======================================================================
+  "m3_ctrl|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+  "m5_ctrl|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
+  "m2_ctrl|--speculative-drafter repeat-last|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+  # v2 safe-mode x best drafters (hybrid k3/k5) x floor {5,8}
+  "v_hybrid_k3_f5_safe|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 5.0 --serve-gate-mode safe-mode|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+  "v_hybrid_k3_f8_safe|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 8.0 --serve-gate-mode safe-mode|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+  "v_hybrid_k5_f5_safe|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 5.0 --serve-gate-mode safe-mode|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
+  "v_hybrid_k5_f8_safe|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 8.0 --serve-gate-mode safe-mode|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
+  # v2 conservative (one decision only) vs safe-mode, on the batch-1 winner
+  "v_hybrid_k5_f5_cons|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 5.0 --serve-gate-mode conservative|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
+  # does v2 rescue the drafter v1 hurt most?
+  "v_repeat_k3_f5_safe|--speculative-drafter repeat-last --serve-buffer-floor 5.0 --serve-gate-mode safe-mode|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
 )
 
 selected() { [ -z "$RUNS" ] && return 0; printf '%s\n' $RUNS | grep -qx "$1"; }

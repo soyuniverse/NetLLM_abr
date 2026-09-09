@@ -284,6 +284,17 @@ def main():
                     help="serve gate: also refuse when the queued entry's own "
                          "predicted buffer is below --serve-buffer-floor, not just "
                          "the observed buffer.")
+    ap.add_argument("--serve-gate-mode", default="fallback",
+                    choices=("fallback", "conservative", "safe-mode"),
+                    help="serve gate response below the floor: 'fallback' = one "
+                         "LLM call (measured worse, DRAFTER_ABLATION section 9); "
+                         "'conservative' = serve one quality level down for that "
+                         "decision, no LLM; 'safe-mode' = serve one level down for "
+                         "every decision while the buffer stays below the floor.")
+    ap.add_argument("--serve-gate-step", type=int, default=1,
+                    help="serve gate conservative/safe-mode: how many quality "
+                         "levels to step down from the last executed bitrate "
+                         "(default 1).")
     ap.add_argument("--probe", default=None,
                     help="name of an abr_spec module exposing install(path); it is "
                          "imported and installed before run_plm.py executes "
@@ -342,6 +353,8 @@ def main():
     serve_gate_info = serve_gate.install(
         floor_seconds=args.serve_buffer_floor,
         check_predicted=args.serve_gate_check_predicted,
+        mode=args.serve_gate_mode,
+        step=args.serve_gate_step,
     )
 
     # ---- seed handling (best effort) ----
@@ -521,7 +534,9 @@ def main():
         "console_log": str(log_path.relative_to(REPO)),
         "decision_trace": decision_trace_info,
         "drafter": drafter_info,
-        "serve_gate": serve_gate_info,
+        "serve_gate": {**serve_gate_info,
+                       **({} if serve_gate_info.get("floor_seconds", 0) == 0
+                          else serve_gate.counters())},
     }
     (phase_dir / "result.json").write_text(json.dumps(result, indent=2))
     allm = json.loads(mpath.read_text())
