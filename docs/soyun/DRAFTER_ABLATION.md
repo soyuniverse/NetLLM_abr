@@ -666,3 +666,46 @@ rebuffering 이 정확히 같은 값(58.33 s)으로 발산 — **응답 방식�
 | **safe-mode** | 과잉 개입 (trip 115–261). 전 조건 실패. |
 | **처방 3 (buffer tolerance 강화)** | `t_repeat_k3_btol0.5`: rebuffering 32.2 s (악화). 실패. |
 | **근본 해법은 draft-time** | queue 가 drain 을 못 내다보고 stale 행동을 쌓는 것이 원인. serve-time 게이트는 그 증상 중 **가장 집중된 것 하나**만 처리한다. 일반 해법은 drafter 가 예측 버퍼 궤적이 floor 밑으로 내려가는 draft 를 **애초에 enqueue 하지 않는 것** — `mpc_draft.py` / `rl_policy` 변경, [[CHANGE_REQUEST_SERVE_TIME_GATE]] §7 후속. |
+
+### 9.9 Seed 견고성 — **배치 후보 확정 실패, 그리고 더 큰 발견**
+
+`v_hybrid_k5_f5_cons` 를 seed {2,3,4} 로, 각 seed 마다 `m5_ctrl`(게이트 없음)을
+paired 대조로 재실행 (다른 조건 전부 동일, `--seed` 만 변경, freeze `83704a6`).
+
+| seed | m5 (게이트 없음) rebuf | v2 gate rebuf | gate Δ | v2 4기준 (T/I/S/Q) |
+|---:|---:|---:|---:|:--|
+| 1 | 18.51 | **1.64** | **−16.87** | **P/P/P/P (4/4)** |
+| 2 | 4.24 | 4.24 | **±0.00** (게이트 무발동, 출력 byte-identical) | P/P/P/P (4/4) |
+| 3 | 25.59 | **29.87** | **+4.28** | **F/P/P/F (2/4)** |
+| 4 | 0.49 | 0.49 | **±0.00** (게이트 무발동) | P/P/P/P (4/4) |
+
+**(1) 게이트는 seed 1 에서만 의미가 있다.** seed 2·4 에서는 queue serve 가
+`< 5 s` 버퍼에서 일어나지 않아 게이트가 발동해도 서브 행동이 동일 → 출력이
+m5_ctrl 과 **비트 단위로 같다**. seed 3 에서는 게이트의 trip 1건 + queue-clear
+재draft 가 RNG 스트림을 밀어 **trace 74 에 15.5 s 캐스케이드를 새로 만든다**
+(m5_ctrl 에서는 0). hybrid k3 (§9.7) 에서 본 것과 같은 RNG 오염
+([[TRAJECTORY_DIVERGENCE]]).
+
+**(2) seed 1 은 이상치였다 — `v_hybrid_k5_f5_cons` 는 배치 후보로 확정 못 함.**
+4 seed 중 게이트가 도움 1 / 무효 2 / 손해 1. seed 1 의 4/4 는 그 seed 가 게이트로
+잡을 수 있는 병리(trace 94 의 stale-high queue drain)를 우연히 가졌기 때문이다.
+
+**(3) 진짜 발견 — 무방비 hybrid k5 의 rebuffering 은 seed 복권이다.**
+
+| | seed 1 | seed 2 | seed 3 | seed 4 | mean | std | max |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| m5 rebuf (s) | 18.51 | 4.24 | 25.59 | **0.49** | 12.2 | 10.2 | 25.6 |
+| m5 ΔQoE % | −1.97 | **+0.78** | −3.01 | +0.43 | −0.94 | — | — |
+
+무방비 hybrid k5 의 rebuffering 이 **0.49 s(A1 보다 좋음) ~ 25.6 s(A1 의 4×)**
+범위로 흔들린다. QoE 도 −3.0 % ~ +0.8 %. rebuffering 은 매 seed **1–2개의 불운한
+trace** (seed 1: 94, seed 3: 79/81/91) 가 지배하고, 그 trace 의 정체는 RNG
+스트림이 정한다.
+
+**즉 §2 의 "조건부 성공 / rebuffering 이 A1 의 2.9–5.8×" 는 seed 1 진술이다.**
+determinism 배터리(§1)는 *같은* config 의 재현성만 봤을 뿐, 결과의 seed 민감도는
+측정하지 않았다. drafter ablation 전체(m2/m3/m4/m5/M6)를 seed 3–4개로 재실행해
+평균·분산으로 다시 봐야 한다 — [[HANDOFF]] Action 5 로 이월.
+
+**(4) [[TRAJECTORY_DIVERGENCE]] 예측 검증.** "v2 가 v1 보다 seed 전반에서 일관"
+— v1(demote-to-LLM)을 seed {2,3,4} 로도 실행해 대조: `<V1_SEED_RESULT>`.
