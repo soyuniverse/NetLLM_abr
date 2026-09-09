@@ -442,3 +442,45 @@ python abr_spec/make_figures.py --out-dir results/soyun/figures
 | fig4 | drafter 3종 × [일치율, q, speedup, ΔQoE, Δrebuffer] + 버퍼 구간별 일치율 | repeat-last 는 어디서나 ~88 %, hybrid 는 `<5s` 에서 mpc 수준(43 %)으로 라우팅 |
 
 수치는 전부 tracked 결과 파일에서 읽으며 없는 값은 "n/a" (추정 없음).
+
+---
+
+# 안전 게이트 (2026-09-09) — 승인 불필요 범위 선검증
+
+## 8. Task 0 — 처방별 변경 범위 분류
+
+배치를 막는 것은 §S.7 의 **총량 게이트 실패**(총 rebuffering A1 6.4 s → 18–37 s).
+§S.7 이 제안한 세 처방이 팀 파일 수정을 실제로 요구하는지 코드로 확인했다.
+
+queue serve 결정은 `rl_policy.sample_speculative` 의 `if self._speculative_queue:`
+브랜치(`rl_policy.py:905-930`)에 있다. `rl_policy` 는 AGENTS.md 상 **하드
+read-only**. 그러나 그 브랜치는 `validate_speculative_observation(observed_state=
+state, …)` 를 **모듈 전역 이름**으로 호출하고 (`rl_policy.py:12` 에서 import),
+`state[1,-1]·BUFFER_NORM_FACTOR(10)` = serve 시점의 실제 버퍼(초)다. 따라서
+serve 게이트는 `drafter_select.py`/`decision_trace.py`/`nan_probe.py` 와 동일한
+monkeypatch 패턴으로 **abr_spec/ 에서 가로챌 수 있다** — 팀 파일·`speculative/`
+무수정.
+
+| 처방 | 구현 위치 후보 | abr_spec/ 내부 가능? | clean 구현 시 팀 파일 | 대안 |
+|---|---|---|---|---|
+| **1. serve 시점 버퍼 재검사** | serve 브랜치, 또는 그것이 호출하는 `validate_speculative_observation` | **가능** — `abr_spec/serve_gate.py` 가 `rl_policy.validate_speculative_observation` 참조를 래핑, 현재 버퍼 < floor 이면 `valid=False, reason='buffer'` → 기존 로직이 queue clear + LLM fallback. **프로토타입 검증**(19.9 s→통과, 3.0 s→거부) + trace-5 스모크(게이트 미발동 시 결과 완전 동일) | `acceptance.py` 에 `buffer_floor_seconds` 파라미터(soyun write-scope, 하위호환) + `rl_policy.py` 1줄 pass-through + `run_plm.py` CLI ~3줄 | monkeypatch 를 영구 배포 경로로 (fork 가 `--speculative-drafter` 를 이미 이 방식으로 주입) |
+| **2. <5s 구간 queue serve 금지** | 처방 1 과 동일 지점·메커니즘 | **가능** — 처방 1 에서 `--serve-buffer-floor 5.0` | 없음 (처방 1 과 통합) | — |
+| **3. buffer tolerance 재조정** | `--speculative-buffer-tolerance` (기존 CLI 인자, AGENTS.md 스윕 허용) | **가능 — 코드 0줄**, run 인자만 | 없음 | — |
+
+**분류 결론:** 세 처방 전부 팀 파일 없이 선검증 가능.
+- **Task 1**: 처방 1·2 → `abr_spec/serve_gate.py` (신규) + `run_wrapped.py`
+  `--serve-buffer-floor` / `--serve-gate-check-predicted` 플래그. 처방 3 →
+  `--speculative-buffer-tolerance` 강화.
+- **Task 3**: Task 1 이 효과를 검증하면 first-class CLI 플래그로 승격하는 최소
+  diff 를 [[CHANGE_REQUEST_SERVE_TIME_GATE]] 로 요청. monkeypatch 영구화 대안도
+  함께 (승인 없이도 기능 확보됨).
+
+### 8.1 동결 (이번 실험)
+
+- **Freeze commit:** `0b3005248f558f2d455a9c7a34a8be33265cb330` — `feat(soyun): serve_gate.py + --serve-buffer-floor`.
+- freeze 직전 변경(둘 다 abr_spec/, 팀 파일 무수정): `serve_gate.py` 신규,
+  `run_wrapped.py` 플래그 2개(+manifest 기록). 40-test 통과, `run_drafter_ablation.sh
+  --dry-run` clean, drafter_ab 실행경로(ablation freeze `0d137ce`) 대비 diff empty
+  — 즉 게이트 off (`--serve-buffer-floor 0`, 기본값) 시 경로 불변.
+- 실행경로 파일(`run_wrapped.py`, `decision_trace.py`, `drafter_select.py`,
+  `serve_gate.py`, `plm_special/speculative/*`)은 이 실험 중 수정 없음.

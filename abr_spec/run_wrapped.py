@@ -274,6 +274,16 @@ def main():
     ap.add_argument("--speculative-hybrid-cv-threshold", type=float, default=0.30,
                     help="hybrid drafter: use MPC when the throughput coefficient "
                          "of variation is at least this (default 0.30, from BASELINE6)")
+    ap.add_argument("--serve-buffer-floor", type=float, default=0.0,
+                    help="refuse to serve a queued speculative action when the "
+                         "buffer is below this many seconds; fall back to one real "
+                         "LLM call instead (abr_spec/serve_gate.py, monkeypatch on "
+                         "rl_policy.validate_speculative_observation). 0 = off "
+                         "(serve path unchanged). See DRAFTER_ABLATION.md section S.7.")
+    ap.add_argument("--serve-gate-check-predicted", action="store_true",
+                    help="serve gate: also refuse when the queued entry's own "
+                         "predicted buffer is below --serve-buffer-floor, not just "
+                         "the observed buffer.")
     ap.add_argument("--probe", default=None,
                     help="name of an abr_spec module exposing install(path); it is "
                          "imported and installed before run_plm.py executes "
@@ -325,6 +335,13 @@ def main():
         args.speculative_drafter,
         buffer_threshold=args.speculative_hybrid_buffer_threshold,
         cv_threshold=args.speculative_hybrid_cv_threshold,
+    )
+
+    # ---- serve-time buffer gate (run_plm.py / rl_policy.py untouched) ----
+    import serve_gate
+    serve_gate_info = serve_gate.install(
+        floor_seconds=args.serve_buffer_floor,
+        check_predicted=args.serve_gate_check_predicted,
     )
 
     # ---- seed handling (best effort) ----
@@ -379,6 +396,7 @@ def main():
         "decision_trace": (None if trace_path is None
                            else str(trace_path.relative_to(REPO))),
         "drafter": drafter_info,
+        "serve_gate": serve_gate_info,
         "parsed": {
             "adapt": "--adapt" in passthrough,
             "test": "--test" in passthrough,
@@ -503,6 +521,7 @@ def main():
         "console_log": str(log_path.relative_to(REPO)),
         "decision_trace": decision_trace_info,
         "drafter": drafter_info,
+        "serve_gate": serve_gate_info,
     }
     (phase_dir / "result.json").write_text(json.dumps(result, indent=2))
     allm = json.loads(mpath.read_text())
