@@ -475,12 +475,19 @@ monkeypatch 패턴으로 **abr_spec/ 에서 가로챌 수 있다** — 팀 파�
   diff 를 [[CHANGE_REQUEST_SERVE_TIME_GATE]] 로 요청. monkeypatch 영구화 대안도
   함께 (승인 없이도 기능 확보됨).
 
-### 8.1 동결 (이번 실험)
+### 8.1 동결 (batch 1)
 
-- **Freeze commit:** `6613ee26d28cae14f858a64653c640ec54e36d56` — `feat(soyun): serve_gate.py + --serve-buffer-floor`.
+- **Freeze commit:** `79095d46` — `feat(soyun): serve_gate.py + --serve-buffer-floor`.
+  batch 1 의 8 phase 중 처음 3개(`g_repeat_k3_f5` / `g_hybrid_k3_f5` /
+  `g_repeat_k5_f5`)는 `a82b93371` 을, 나머지 5개는 `d442728d3` 를
+  `manifest_phase.json` 에 기록했다 — 두 커밋의 **실행경로는 byte-identical**
+  (`git diff a82b933 d442728 -- adaptive_bitrate_streaming/ abr_spec/run_wrapped.py
+  abr_spec/serve_gate.py abr_spec/decision_trace.py abr_spec/drafter_select.py`
+  = empty). 차이는 `NEEDS_UPSTREAM.md`(문서) + `build_drafter_ablation_report.py`
+  (post-hoc 분석 스크립트, `run_wrapped.py` 가 import 하지 않음) 뿐이다.
 - freeze 직전 변경(둘 다 abr_spec/, 팀 파일 무수정): `serve_gate.py` 신규,
   `run_wrapped.py` 플래그 2개(+manifest 기록). 40-test 통과, `run_drafter_ablation.sh
   --dry-run` clean, drafter_ab 실행경로(ablation freeze `0d137ce`) 대비 diff empty
   — 즉 게이트 off (`--serve-buffer-floor 0`, 기본값) 시 경로 불변.
 - 실행경로 파일(`run_wrapped.py`, `decision_trace.py`, `drafter_select.py`,
-  `serve_gate.py`, `plm_special/speculative/*`)은 이 실험 중 수정 없음.
+  `serve_gate.py`, `plm_special/speculative/*`)은 batch 1 중 수정 없음.
