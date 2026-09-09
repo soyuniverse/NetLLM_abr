@@ -1,0 +1,44 @@
+[
+  {
+    "label": "v1_fallback",
+    "n_rows": 4700,
+    "n_trips": 3,
+    "first_trip_global_pos": 2482,
+    "n_control_decisions": 4700,
+    "post_trip_mismatch": 608,
+    "post_trip_total": 2218,
+    "post_trip_mismatch_rate": 0.2741,
+    "per_intervention_decisions": 202.7,
+    "diverged_traces": 45,
+    "control_rebuffer_s": 18.506,
+    "gated_rebuffer_s": 7.0
+  },
+  {
+    "label": "v2_conservative",
+    "n_rows": 4700,
+    "n_trips": 4,
+    "first_trip_global_pos": 2482,
+    "n_control_decisions": 4700,
+    "post_trip_mismatch": 88,
+    "post_trip_total": 2218,
+    "post_trip_mismatch_rate": 0.0397,
+    "per_intervention_decisions": 22.0,
+    "diverged_traces": 9,
+    "control_rebuffer_s": 18.506,
+    "gated_rebuffer_s": 1.636
+  },
+  {
+    "label": "safe_mode",
+    "n_rows": 4585,
+    "n_trips": 0,
+    "first_trip_global_pos": 0,
+    "n_control_decisions": 4700,
+    "post_trip_mismatch": 1248,
+    "post_trip_total": 4585,
+    "post_trip_mismatch_rate": 0.2722,
+    "per_intervention_decisions": null,
+    "diverged_traces": 96,
+    "control_rebuffer_s": 18.506,
+    "gated_rebuffer_s": 6.943
+  }
+]

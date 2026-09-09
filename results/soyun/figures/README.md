@@ -58,3 +58,7 @@ low-buffer decision) over-corrects. Right: speedup vs rebuffering for all
 configs. The one config meeting all four pre-fixed criteria is hybrid k5 + v2
 conservative + floor 5 s (filled square): rebuffering 1.6 s, QoE -0.05 % vs A1,
 speedup 1.50x.
+
+## fig6_trajectory_divergence  (new 2026-09-09)
+
+Figure 6. The serve-time gate fires on the same 3 queue-serve decisions in v1 and v2; both serve bitrate 0 there. Left: the action-mismatch rate against the un-gated run, vs how many decisions downstream. The evaluation RNG is seeded once for all 100 traces (test.py:42), so a gate trip that changes the RNG-draw count shifts every later trace. v1's demote-to-LLM (1 extra sample + a stochastic LLM decision per trip) holds a 27 % mismatch for the rest of the run; v2's step-down (0 samples at the trip) perturbs traces 59-64 then re-converges. Right: rebuffering per trace -- v2 fixes trace 94's 13 s cascade structurally (its trip lands on the drain chunk); v1 relocates trace 94 by luck and creates a new 5.8 s cascade on trace 79.

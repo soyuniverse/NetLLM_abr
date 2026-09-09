@@ -175,3 +175,33 @@ Format per entry:
   drafter changes the `q`-vs-context trade (e.g. a drafter whose accepted prefix
   keeps growing with k without the context penalty).
 - **DRAFTER_ABLATION ran k ∈ {3, 5}**; k=3 is the operating point.
+
+---
+
+## 6. `test.py` seeds the evaluation RNG once, not per episode
+
+- **Date:** 2026-09-09
+- **File / area:** `adaptive_bitrate_streaming/plm_special/test.py:42` —
+  `set_random_seed(args.seed)` is called **once, immediately before** the
+  `while True:` episode loop (line 44). `model.clear_dq()` (line 89) resets the
+  DT deques and the drafter but **not** `random` / `numpy` / `torch`.
+- **Why it matters (speculative-inference context):** the action sampler
+  (`rl_policy._sample → random.choices`, `--speculative-verification-mode
+  sample`) draws from a **single RNG stream shared across all 100 evaluation
+  traces**. Any intervention that changes how many draws trace *N* consumes
+  (a fallback vs a queue serve; a forced re-draft) shifts the stream for every
+  later trace, so an A/B that differs on 3 decisions in trace 52 also perturbs
+  traces 54–99. [[TRAJECTORY_DIVERGENCE]] measures this: the serve gate's 3
+  trips produce a **27 % sustained downstream action-mismatch** for the
+  demote-to-LLM variant purely through RNG-stream shift, not through any
+  decision being "wrong".
+- **Proposed change:** re-seed per episode — `set_random_seed(args.seed)` (or
+  `random.Random(args.seed + ep_count)` / `np.random.default_rng(...)`) *inside*
+  the loop, right after `clear_dq()`. Then every trace is independent and every
+  A/B is a paired within-trace comparison. This does not change any single-config
+  result (the determinism battery, [[DRAFTER_ABLATION]] §1, already passes) — it
+  only removes cross-trace contamination when two configs are compared.
+- **Owner to contact:** `test.py` / eval-harness owner.
+- **Status:** open, medium priority. Blocks a clean read of any serve-time /
+  mid-run intervention A/B (serve gate, and any future draft-time gate). Not
+  soyun's to fix.

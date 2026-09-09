@@ -377,6 +377,70 @@ def fig5(out_dir):
          "-0.05 % vs A1, speedup 1.50x.")
 
 
+
+DIVDIR = REPO / "results" / "soyun" / "serve_gate_20260909" / "analysis"
+
+
+def fig6(out_dir):
+    """serve-gate trajectory divergence: mismatch-vs-distance + per-trace rebuffer."""
+    def readdiv(label):
+        rows = list(csv.DictReader(open(DIVDIR / f"divergence_{label}.csv")))
+        buckets = [(int(r["x"]), float(r["rate"])) for r in rows if r["kind"] == "bucket" and r["rate"]]
+        traces = {int(r["x"]): (float(r["mismatch"]), float(r["total"]))
+                  for r in rows if r["kind"] == "trace_rebuffer"}
+        return buckets, traces
+
+    v1b, v1t = readdiv("v1_fallback")
+    v2b, v2t = readdiv("v2_conservative")
+
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(9.0, 3.6),
+                                   gridspec_kw={"width_ratios": [3, 2]})
+
+    axL.plot([x for x, _ in v1b], [r * 100 for _, r in v1b], "-o", ms=3, color="black",
+             lw=1.2, label="v1 fallback (demote to LLM)")
+    axL.plot([x for x, _ in v2b], [r * 100 for _, r in v2b], "--s", ms=3, color="0.45",
+             lw=1.2, label="v2 conservative (step down, no LLM)")
+    axL.axhline(0, color="0.7", lw=0.6)
+    axL.set_xlabel("decisions after the first gate trip")
+    axL.set_ylabel("action-mismatch rate vs the un-gated run (%)")
+    axL.set_title("Downstream divergence from 3 gate trips")
+    axL.legend(fontsize=7, loc="upper right")
+    axL.annotate("v1: 27 % sustained, never damps", (1100, 30), fontsize=7)
+    axL.annotate("v2: burst on traces 59-64, then re-converges to 0",
+                 (150, 52), fontsize=7)
+
+    # right: per-trace rebuffer for the traces that matter
+    base = {int(r["x"]): float(r["mismatch"]) for r in csv.DictReader(
+        open(DIVDIR / "divergence_v1_fallback.csv")) if r["kind"] == "trace_rebuffer"}
+    traces = sorted(set(base) | set(v1t) | set(v2t))
+    x = range(len(traces))
+    w = 0.27
+    axR.bar([i - w for i in x], [base.get(t, 0) for t in traces], w, color="0.5",
+            edgecolor="black", linewidth=0.6, label="m5 (no gate)")
+    axR.bar([i for i in x], [v1t.get(t, (0, 0))[1] for t in traces], w, color="white",
+            hatch="////", edgecolor="black", linewidth=0.6, label="v1 fallback")
+    axR.bar([i + w for i in x], [v2t.get(t, (0, 0))[1] for t in traces], w, color="0.8",
+            edgecolor="black", linewidth=0.6, label="v2 conservative")
+    axR.set_xticks(list(x))
+    axR.set_xticklabels([f"tr {t}" for t in traces], fontsize=7)
+    axR.set_ylabel("rebuffering on that trace (s)")
+    axR.set_title("Where the rebuffering is")
+    axR.legend(fontsize=6.5)
+    axR.annotate("v1 moves the cascade to tr 79", (0.5, 5.9), fontsize=6.5)
+    save(fig, out_dir, "fig6_trajectory_divergence",
+         "Figure 6. The serve-time gate fires on the same 3 queue-serve "
+         "decisions in v1 and v2; both serve bitrate 0 there. Left: the "
+         "action-mismatch rate against the un-gated run, vs how many decisions "
+         "downstream. The evaluation RNG is seeded once for all 100 traces "
+         "(test.py:42), so a gate trip that changes the RNG-draw count shifts "
+         "every later trace. v1's demote-to-LLM (1 extra sample + a stochastic "
+         "LLM decision per trip) holds a 27 % mismatch for the rest of the run; "
+         "v2's step-down (0 samples at the trip) perturbs traces 59-64 then "
+         "re-converges. Right: rebuffering per trace -- v2 fixes trace 94's 13 s "
+         "cascade structurally (its trip lands on the drain chunk); v1 relocates "
+         "trace 94 by luck and creates a new 5.8 s cascade on trace 79.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", default=str(REPO / "results" / "soyun" / "figures"))
@@ -390,10 +454,11 @@ def main():
     fig2(t, sweep, out)
     fig3(sweep, out)
     fig4(t, out)
-    try:
-        fig5(out)
-    except FileNotFoundError:
-        print('  fig5 skipped (serve_gate_table.csv not built yet)')
+    for fn in (fig5, fig6):
+        try:
+            fn(out)
+        except (FileNotFoundError, KeyError) as e:
+            print(f'  {fn.__name__} skipped ({e})')
 
 
 if __name__ == "__main__":
