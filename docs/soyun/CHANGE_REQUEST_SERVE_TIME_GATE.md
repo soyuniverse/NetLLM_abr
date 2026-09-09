@@ -1,57 +1,57 @@
-# CHANGE_REQUEST — serve-time buffer gate for speculative queue reuse
+# CHANGE_REQUEST — promote the serve-time buffer gate to a first-class flag
 
 **From:** soyun (speculative inference) · **Branch:** `soyun/spec-abr` · **Date:** 2026-09-09
 **To:** `run_plm.py` / speculative-CLI owner (`suy2136`), `rl_policy.py` owner
 **Status:** DRAFT — awaiting review
-**Prerequisite reading:** [[DRAFTER_ABLATION]] §S (safety metric), §S.7 (verdict), §8 (Task 0 classification)
+**Prerequisite reading:** [[DRAFTER_ABLATION]] §S.7, §8, §9 · [[SERVE_GATE_DIAGNOSIS]]
 
 ---
 
-## 1. Problem — the total-rebuffering gate blocks deployment
+## 0. What this is (and is not)
+
+This is **not** a request to unblock a feature. The serve-time buffer gate is
+already implemented and measured — `abr_spec/serve_gate.py`, installed by
+`abr_spec/run_wrapped.py`, monkeypatching `rl_policy.validate_speculative_observation`
+before `run_plm.py` runs. That is the **same pattern** the fork already uses to
+inject the drafter choice (`abr_spec/drafter_select.py`; `run_plm.py` builds the
+drafter at a single hard-coded site, [[NEEDS_UPSTREAM]] closing note).
+
+This request is to **promote** that validated knob to a first-class
+`run_plm.py` CLI flag, so it works on a bare `run_plm.py` invocation and not only
+through soyun's wrapper. If the team would rather it stay on the wrapper (the
+same disposition as `--speculative-drafter`), this request reduces to an
+acknowledgement and no code changes.
+
+## 1. Why the gate exists
 
 The drafter replacement ([[DRAFTER_ABLATION]] §2) is the first speculative
 configuration to clear **speedup 1.0× and 1.24×** (`repeat-last` k3 = 1.419× at
-q 37.8 %, vs the parameter sweep's 0.97× ceiling). It is held back by one gate:
+q 37.8 %). It is held back by the **total-rebuffering** judgement: total
+rebuffering rises from A1's 6.4 s to 18–37 s (§9). §S.6 localises the cause — a
+handful of queue entries execute after the buffer has drained below ~5 s, drafted
+several chunks earlier when the buffer was comfortable. The gate refuses those.
 
-| gate | threshold (pre-fixed) | result |
-|---|---|---|
-| incidence — queue serve no likelier to rebuffer than an LLM call | C ≤ 2× the mpc control | **PASS** (C ≤ 0.97× mpc) |
-| **total rebuffering** | ≤ 0.64 s (10 % of A1's 6.39 s) | **FAIL** — 18.5–37.1 s (2.9–5.8× A1) |
+## 2. What the measurements say (`results/soyun/serve_gate_20260909/`)
 
-Evidence: [[DRAFTER_ABLATION]] §2 (table), §S.6, and **`fig4`**
-(`results/soyun/figures/fig4_drafter_comparison.png` — Δrebuffer bar and the
-by-buffer-band agreement panel).
+- **The gate is drafter-dependent** (§9.1). It helps only `hybrid k5`, whose
+  unprotected `< 5 s` queue serves directly caused 10.2 s of rebuffering; for
+  every other drafter/k the same gate makes rebuffering worse.
+- **`hybrid k5 + gate, floor 5 s` is the one 4/4 config** (§9.3): total
+  rebuffering 18.5 → 7.0 s (Δ vs A1 +0.6 s), QoE −2.0 → −1.3 %, speedup 1.47×,
+  incidence 0.56 → 0.26 %.
+- **The `mode=fallback` response (demote to an LLM call) is a dead end**
+  ([[SERVE_GATE_DIAGNOSIS]]): the sample-mode LLM picks an unsafe bitrate in a
+  drained buffer and perturbing 3–5 decisions diverges the closed loop.
+  **`mode=conservative` / `mode=safe-mode`** (serve a deterministic low bitrate,
+  no LLM) is the direction — results in §9.6 `<FILL from batch 2>`.
 
-## 2. Cause — draft/execute buffer drain
+## 3. The ask — minimal diff (~11 lines, 3 files; team files ≈ 6 lines)
 
-`decisions.jsonl` (`results/soyun/drafter_ab_20260908/*/decisions.jsonl`,
-distilled in `results/soyun/derived/`) localises it precisely (§S.6(3)):
-
-- A `queue_serve` decision runs a bitrate that the drafter proposed **k chunks
-  earlier**. Between draft and execution the buffer can drain.
-- Almost all queue-serve rebuffering lands in the **`< 5 s` buffer band**. The
-  **`≥ 20 s` band — 76 % of all queue serves — contributes zero**.
-- `hybrid`'s route-time buffer check does not help: at draft time the buffer was
-  still high, so it routes to `repeat-last`; the drain happens afterwards.
-- Sharpest case: **`m5_hybrid_k5`, `< 5 s` band — 7 queue serves, mean chunk
-  rebuffering 1.46 s** (vs ~0.00 s for queue serves in every other band).
-
-| phase | `<5s` queue serves | mean queue rebuffer (s/chunk) | window-union rebuffer in `<5s` (s) |
-|---|---:|---:|---:|
-| m2 repeat k3 | 5 | 0.339 | 7.33 |
-| m3 hybrid k3 | 3 | 0.000 | 9.48 |
-| m4 repeat k5 | 2 | 0.028 | 7.68 |
-| m5 hybrid k5 | 7 | **1.462** | 16.02 |
-
-## 3. Request — minimal diff for a first-class serve-time buffer floor
-
-A queued action should not be served when the buffer is already below a floor;
-fall back to one real LLM call instead. The queue-serve branch
+Promote `--serve-buffer-floor` and `--serve-gate-mode`. The queue-serve branch
 (`rl_policy.sample_speculative`, `rl_policy.py:902-933`) already computes
-`validation = validate_speculative_observation(observed_state=state, …)` and has
-`buffer_size` in scope. The floor is one extra comparison.
-
-**Proposed diff (≈ 11 lines across 3 files; team files ≈ 6 lines):**
+`validate_speculative_observation(observed_state=state, …)` and has `buffer_size`
+in scope — the floor is one extra comparison; the response modes reuse the
+existing `_fallback_sample` / `_append_observed_action` paths.
 
 ### 3a. `plm_special/speculative/acceptance.py` — soyun-owned, backward-compatible (~5 lines)
 
@@ -59,71 +59,59 @@ fall back to one real LLM call instead. The queue-serve branch
 def validate_speculative_observation(
     observed_state, predicted_state, observed_return, predicted_return,
     buffer_tolerance_seconds, state_tolerance, return_tolerance,
-    serve_buffer_floor_seconds=0.0,          # NEW, default = disabled
+    serve_buffer_floor_seconds=0.0,                     # NEW, default = disabled
 ):
     ...
-    # after buffer_error / state_error / return_error are computed:
-    reason = None
     observed_buffer_seconds = float(observed[1, -1]) * BUFFER_NORM_FACTOR   # NEW
+    reason = None
     if serve_buffer_floor_seconds > 0 and observed_buffer_seconds < serve_buffer_floor_seconds:
-        reason = 'buffer'                     # NEW — reuse the existing reason/counter
+        reason = 'buffer'                                # NEW — reuse the reason/counter
     elif buffer_error > buffer_tolerance_seconds:
         reason = 'buffer'
-    elif state_error > state_tolerance:
-        ...
+    elif ...
 ```
 
 `serve_buffer_floor_seconds=0.0` keeps every existing caller byte-identical
-(confirmed by the tolerance-0 regression battery, §5).
+(the tolerance-0 regression battery, §5, does not pass a floor).
 
-### 3b. `plm_special/models/rl_policy.py` — **team file, 3 lines**
+### 3b. `plm_special/models/rl_policy.py` — **team file, ~3 lines**
 
 ```python
-# __init__ signature + body:
-    speculative_serve_buffer_floor=0.0,                              # NEW arg
-    ...
-    self.speculative_serve_buffer_floor = float(speculative_serve_buffer_floor)   # NEW
-
-# sample_speculative, the existing validate_speculative_observation(...) call:
-            validation = validate_speculative_observation(
-                observed_state=state,
-                predicted_state=queued["predicted_state"],
-                ...
-                return_tolerance=self.speculative_return_tolerance,
-                serve_buffer_floor_seconds=self.speculative_serve_buffer_floor,   # NEW
-            )
+    speculative_serve_buffer_floor=0.0,                              # __init__ arg
+    self.speculative_serve_buffer_floor = float(speculative_serve_buffer_floor)
+    # in the existing validate_speculative_observation(...) call:
+        serve_buffer_floor_seconds=self.speculative_serve_buffer_floor,
 ```
 
-No new branch, no new counter, no change to `serve_verified_queue` /
-`_fallback_sample` — a floor trip is already handled by the `else` path
-(`_speculative_queue.clear()` → `buffer_mismatch_fallbacks += 1` →
-`_fallback_sample`).
+This covers `mode='fallback'` (the existing `else` path already clears the queue
+and calls the LLM). `mode='conservative'` / `mode='safe-mode'` — the responses
+§9.6 recommends — need ~6 more lines in `sample_speculative` (serve
+`max(0, last_bitrate - 1)` directly instead of `_fallback_sample`). soyun will
+send that as a follow-up diff once §9.6 names the mode; it is small and touches
+only the `if self._speculative_queue:` branch.
 
-### 3c. `run_plm.py` — **team file, 3 lines**
+### 3c. `run_plm.py` — **team file, ~3 lines**
 
 ```python
-parser.add_argument('--speculative-serve-buffer-floor', type=float, default=0.0,
-    help='refuse to serve a queued speculative action when the buffer is below '
-         'this many seconds (0 disables)')
+parser.add_argument('--speculative-serve-buffer-floor', type=float, default=0.0)
+parser.add_argument('--speculative-serve-gate-mode',
+                    choices=('fallback', 'conservative', 'safe-mode'), default='fallback')
 if args.speculative_serve_buffer_floor < 0:
     raise ValueError('--speculative-serve-buffer-floor must be non-negative')
-# in the OfflineRLPolicy(...) construction (run_plm.py:442-447):
-    speculative_serve_buffer_floor=args.speculative_serve_buffer_floor,
+# pass both into OfflineRLPolicy(...) (run_plm.py:442-447)
 ```
-
-Recommended default from Task 1: **`<TBD from results>`** (§4 of this doc).
 
 ## 4. Impact analysis
 
 | Surface | Impact |
 |---|---|
-| `acceptance.py` other callers | none — `build_acceptance_plan` untouched; `validate_speculative_observation`'s new kwarg defaults to disabled. Grep: only `rl_policy.sample_speculative` calls it. |
-| `rl_policy.py` non-speculative path (`sample`, selectors) | none — the new field is only read inside the `if self._speculative_queue:` branch, which is unreachable when `speculative_draft_steps == 0`. |
-| Selector modules (`selectors.py` / `event_selection.py` / `selection_layout.py`, other owner) | none — serve gate acts before any context is built; selector code path is not entered on a gated decision (it becomes a plain `_fallback_sample`, same as an existing buffer-tolerance miss). |
-| NBS / trainer (`trainer.py`, `--nbs-v19`) | none — training does not call `sample_speculative`. |
-| Existing results / regression fixtures | none when floor = 0 (the default). `abr_spec/tests/_reference_mpc_draft.py` and the tolerance-0 battery do not exercise `validate_speculative_observation` with a floor. |
-| `decisions.jsonl` schema (`abr_spec/decision_trace.py`) | none — a gated demotion is an existing `fallback` / `reason='buffer'` record. |
-| Metrics (`selector_metrics.json`) | `buffer_mismatch_fallbacks` and `fallback_calls` rise; `queued_actions_served` falls. All existing keys, no new key. |
+| `acceptance.py` other callers | none — only `rl_policy.sample_speculative` calls `validate_speculative_observation`; `build_acceptance_plan` untouched; new kwarg defaults to disabled. |
+| `rl_policy.py` non-speculative path (`sample`, selectors) | none — the field is read only inside `if self._speculative_queue:`, unreachable when `speculative_draft_steps == 0`. |
+| Selector modules (`selectors.py` / `event_selection.py` / `selection_layout.py`) | none — a gated decision never enters the selector path (it is a plain fallback / a forced serve, before any context is built). |
+| NBS / trainer | none — training does not call `sample_speculative`. |
+| Existing results & fixtures | none at floor 0 (the default). `abr_spec/tests/_reference_mpc_draft.py` and the tolerance-0 battery do not exercise a floor. |
+| Metrics (`selector_metrics.json`) | `buffer_mismatch_fallbacks` / `fallback_calls` rise, `queued_actions_served` falls — all existing keys, no new key. `mode=safe-mode` adds a `low_buffer_safe` value to `last_selection_trace['stage']` (consumed only by soyun's `decision_trace.py`). |
+| `decision_trace.py` schema | none for `fallback` / `conservative`; `safe-mode` adds the `low_buffer_safe` stage string (soyun-owned tracer, already handled). |
 
 ## 5. Verification plan (post-merge)
 
@@ -131,39 +119,36 @@ Recommended default from Task 1: **`<TBD from results>`** (§4 of this doc).
    `CUDA_VISIBLE_DEVICES="" .venv/bin/python -m pytest \
     adaptive_bitrate_streaming/tests/test_mpc_draft.py \
     adaptive_bitrate_streaming/tests/test_speculative_acceptance.py \
-    abr_spec/tests/test_drafters.py -q` → must stay **40 passed**, incl. the
-   60-case tolerance-0 `MPCRefactorRegressionTest` battery.
-2. **End-to-end — floor 0 reproduces the ablation:** re-run `m1a_mpc_k3_sample`
-   and `m2_repeat_k3` with `--speculative-serve-buffer-floor 0`; QoE / q /
-   acceptance / fallback split must match `results/soyun/drafter_ab_20260908/`
-   to the digit (as `m1a` reproduced SWEEP_SPEC `s0`, §3).
-3. **Effect — floor `<REC>` reproduces Task 1:** re-run with the recommended
-   floor; total rebuffering, speedup, QoE, and the §S metrics must match
-   `results/soyun/serve_gate_20260909/` within latency noise.
-4. **New unit test** (`abr_spec/tests/test_serve_gate.py`, soyun-owned): a
-   `validate_speculative_observation` call with `serve_buffer_floor_seconds=5`
-   and an observed buffer of 3 s returns `valid=False, reason='buffer'`; with a
-   20 s buffer it is unaffected.
+    abr_spec/tests/test_drafters.py -q` → **40 passed** (incl. the 60-case
+   tolerance-0 `MPCRefactorRegressionTest` battery).
+2. **End-to-end — floor 0 reproduces the ablation:** `m1a_mpc_k3_sample` and
+   `m2_repeat_k3` with the flag absent / at 0 must match
+   `results/soyun/drafter_ab_20260908/` to the digit (as `m1a` reproduced
+   SWEEP_SPEC `s0`, §3).
+3. **Effect — the recommended config reproduces §9:** re-run it and match
+   `results/soyun/serve_gate_20260909/` (behaviour) within latency noise.
+4. **New unit test** (`abr_spec/tests/test_serve_gate.py`, soyun-owned):
+   `validate_speculative_observation(..., serve_buffer_floor_seconds=5)` with an
+   observed buffer of 3 s → `valid=False, reason='buffer'`; 20 s → unaffected.
 
-## 6. Alternative — no team file needed
+## 6. Alternative — keep it on the wrapper (no team file)
 
-`abr_spec/serve_gate.py` (committed, freeze `<FREEZE_2>`) already implements the
-gate by monkeypatching `rl_policy.validate_speculative_observation` before
-`run_plm.py` runs — the **same pattern** the fork already uses to inject the
-drafter choice (`abr_spec/drafter_select.py`; see [[NEEDS_UPSTREAM]] note that
-`run_plm.py` builds the drafter at a hard-coded site). It is enabled by
-`abr_spec/run_wrapped.py --serve-buffer-floor N`.
+`abr_spec/serve_gate.py` is complete and validated. Enabled by
+`abr_spec/run_wrapped.py --serve-buffer-floor N --serve-gate-mode M`.
 
-- **Pro:** zero team-file change; Task 1 results are already produced this way.
-- **Con:** the gate only exists when a run goes through `run_wrapped.py`; a bare
-  `run_plm.py` invocation does not get it. Fine for soyun's experiments, not a
-  property you would ship.
+- **Pro:** zero team-file change; all of `serve_gate_20260909` is produced this way.
+- **Con:** a bare `run_plm.py` run does not get the gate. Acceptable for soyun's
+  experiments; not a property you would ship.
 
-If the diff in §3 is not wanted, the monkeypatch stays as the deployment path
-and this request reduces to: *acknowledge that `--serve-buffer-floor` lives on
-the wrapper, not `run_plm.py`* — the same disposition as `--speculative-drafter`.
+If §3 is declined, the disposition is: *`--serve-buffer-floor` lives on the
+wrapper, like `--speculative-drafter`* — and this document is closed as
+acknowledged.
 
----
+## 7. Recommended default
 
-*Numbers in §4/§5 marked `<TBD>` / `<REC>` are filled once Task 1
-(`results/soyun/serve_gate_20260909/`) completes.*
+`<FILL after DRAFTER_ABLATION §9.6 (batch 2) names the winning mode/floor. Batch 1
+already gives one 4/4 config: hybrid k5 + mode=fallback + floor 5 s. If v2
+conservative/safe-mode generalises to hybrid k3 as well, that becomes the
+recommendation instead.>`
+
+*The default in §3 is `0.0` / `fallback` regardless — the gate is opt-in.*
