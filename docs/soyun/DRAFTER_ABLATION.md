@@ -561,3 +561,90 @@ demote-to-LLM 이 원인이나 **LLM latency 때문이 아니다** (LLM 호출 �
 action 4 → 12.6 s rebuffer), (b) 3–5개 결정 교란이 폐루프 궤적을 통째로 이동
 (hybrid k3: 게이트 trip 3건 모두 rebuffer 0 인데 총 +31 s 가 다른 곳에서 발생).
 → v2 는 LLM handoff 없이 **결정론적 보수 행동을 즉시 서브**한다.
+
+### 9.6 batch 2 — v2 게이트 (LLM handoff 없음)
+
+[[SERVE_GATE_DIAGNOSIS]] 대로 v2 는 마른 버퍼에서 **결정론적 보수 행동을 즉시
+서브**한다 (LLM 호출·PLM forward 없음, `_append_observed_action` 만 실행).
+
+- **`conservative`**: queue 엔트리 서브 직전 버퍼 < floor 이면 그 엔트리를 거부하고
+  `max(0, 직전-step)` 을 서브 (그 결정 1회만). v1 `fallback` 과 **동일한 발동
+  조건**(queue serve at low buffer), 응답만 다르다.
+- **`safe-mode`**: 버퍼 < floor 인 동안 **모든 결정**을 `max(0, 직전-step)` 으로
+  서브 (drafter·LLM 우회), 버퍼 회복 시 speculation 재개.
+
+같은 세션 대조군(`m2_ctrl`/`m3_ctrl`/`m5_ctrl`) 을 새로 측정 — v1 대조군(어제)의
+speedup 이 cross-session drift 로 ~10 % 낮았음이 확인됐다 (m5 1.326× → m5_ctrl
+**1.522×**, 행동 지표는 완전 동일).
+
+| config | mode | floor | trips | QoE | ΔQoE% | speedup | rebuf (s) | Δrebuf | C% | T/I/S/Q |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|:--|
+| m5_ctrl (hybrid k5) | none | — | — | 0.93001 | −1.97 | 1.522× | 18.51 | +12.11 | 0.559 | F/P/P/~ |
+| g_hybrid_k5_f5 (v1) | fallback | 5 | 3 | 0.93623 | −1.32 | 1.474× | 7.00 | +0.61 | 0.258 | P/P/P/P |
+| **v_hybrid_k5_f5_cons** | **conservative** | **5** | **3** | **0.94824** | **−0.05** | **1.499×** | **1.64** | **−4.76** | 0.306 | **P/P/P/P** |
+| v_hybrid_k5_f5_safe | safe-mode | 5 | 115 | 0.93626 | −1.31 | 1.529× | 39.83 | +33.44 | 0.052 | F/P/P/P |
+| v_hybrid_k5_f8_safe | safe-mode | 8 | 261 | 0.93360 | −1.59 | 1.565× | 41.05 | +34.66 | 0.160 | F/P/P/F |
+| m3_ctrl (hybrid k3) | none | — | — | 0.93191 | −1.77 | 1.662× | 26.87 | +20.48 | 0.228 | F/P/P/~ |
+| v_hybrid_k3_f5_safe | safe-mode | 5 | 117 | 0.92442 | −2.56 | 1.592× | 25.98 | +19.59 | 0.232 | F/P/P/F |
+| v_hybrid_k3_f8_safe | safe-mode | 8 | 252 | 0.92945 | −2.03 | 1.611× | 16.59 | +10.20 | 0.000 | F/P/P/F |
+| v_repeat_k3_f5_safe | safe-mode | 5 | 116 | 0.94536 | −0.35 | 1.613× | 19.72 | +13.33 | 0.057 | F/P/P/P |
+
+**(1) `conservative` × hybrid k5 = 배치 후보 (4/4), v1 을 압도한다.**
+같은 3개 결정만 개입하는데 rebuffering 18.5 → **1.64 s** (A1 6.4 s 보다도 낮음),
+QoE −2.0 → **−0.05 %** (사실상 A1). v1 fallback 이 같은 3개 결정에서 7.0 s /
+−1.3 % 였던 것과 대조 — 차이는 전적으로 **응답 방식**이다. 그 3개 chunk 자체는
+v1·v2 모두 action 0 을 서브해 rebuffer 0 이지만, v1 은 LLM forward 로 정책
+history 에 다른 embedding 을 남겨 이후 궤적이 7 s 로 발산하고, v2 는
+`_append_observed_action` 으로 최소 교란해 1.6 s 에 머문다. **[[SERVE_GATE_DIAGNOSIS]]
+의 "결정론적 최소 개입 < LLM handoff < 과잉 개입" 이 수치로 확인됐다.**
+
+**(2) `safe-mode` 는 과잉 개입 — 전 조건에서 실패.** 버퍼 < floor 인 모든 결정을
+강제 step-down 하면 trip 이 115–261건으로 폭증하고, rebuffering 이 오히려 늘거나
+(hybrid k5 39.8 s) 거의 그대로다. 단 QoE 는 회복되는 경향
+(`v_repeat_k3_f5_safe` −0.35 %) — 강제 저비트레이트가 smoothness penalty 를 줄이기
+때문. incidence 는 크게 개선 (C 0.05 %) 되나 총량 게이트는 못 넘는다.
+
+**(3) speedup 비용.** `conservative` (3 trip) 는 same-session 대조(m5_ctrl 1.522×)
+대비 **−1.5 %** (1.499×) — trip 이 3개뿐이라 3-bucket 단가 모형에 사실상 안 보인다
+([[SWEEP_SPEC]] §12.5). `safe-mode` 는 `low_buffer_safe` 라는 4번째 결정 유형
+(≈ c_serve, 115–260건)을 추가해 3-bucket 모형이 2–5 % 과소예측한다.
+
+### 9.7 batch 3 — `conservative` 일반화 시험 + floor 응답 곡선
+
+`conservative` mode 를 다른 drafter/k 와 hybrid k5 의 다른 floor 로 확장했다.
+
+| config | drafter/k | floor | trips | QoE Δ% | rebuf (s) | Δrebuf | 판정 |
+|---|---|---:|---:|---:|---:|---:|:--|
+| m5_ctrl | hybrid k5 | — | — | −1.97 | 18.51 | +12.11 | 2/4 |
+| v_hybrid_k5_f3_cons | hybrid k5 | 3 | **0** | −1.97 | 18.51 | +12.11 | m5_ctrl 과 완전 동일 (미발동) |
+| **v_hybrid_k5_f5_cons** | hybrid k5 | **5** | **3** | **−0.05** | **1.64** | **−4.76** | **4/4** |
+| v_hybrid_k5_f8_cons | hybrid k5 | 8 | **45** | −1.76 | 22.39 | +16.00 | 2/4 — floor 8 은 5–8 s 대역까지 잡아 45 trip → 궤적 발산 |
+| v_repeat_k3_f5_cons | repeat-last k3 | 5 | 4 | −1.41 | 20.54 | +14.14 | 3/4 — QoE 소폭 회복(−1.53→−1.41), 총량 여전히 실패 |
+| v_hybrid_k3_f5_cons | hybrid k3 | 5 | 2 | −3.85 | **58.33** | +51.94 | 2/4 — **v1 fallback(58.33 s)과 완전히 동일**. 이 조건은 서브된 행동과 무관하게 **결정론적 +31 s 궤적 발산** (mechanism b 단독) |
+| v_repeat_k5_f5_cons | repeat-last k5 | 5 | 2 | −3.78 | 37.07 | +30.67 | 2/4 — 대조군(37.12)과 사실상 동일. v1(43.02)보다는 나음 (LLM 의 action-4 harm 제거) |
+
+**(1) 게이트는 hybrid k5 전용이다.** hybrid k5 의 무방비 실패가 **한 trace(#94)에
+13 s rebuffer 캐스케이드**로 집중돼 있고 (§S.6 의 stale-high queue), floor 5 게이트가
+그 drain 시작점 3건을 잡아 캐스케이드를 원천 차단한다 (trace 94: 13.11 → 0.41 s).
+다른 drafter/k 는 이런 집중 실패가 없어 게이트 개입이 순손해(hybrid k3) 또는
+중립(repeat k3/k5)이다.
+
+**(2) floor 5 s 는 knife-edge 다.** floor 3 은 미발동(0 trip), floor 8 은 과발동
+(45 trip → 발산). 이 시스템의 chunk playout 이 4 s 라 위급 drain 이 정확히 4–5 s
+대역에 있고, 게이트는 그 대역만 얇게 잡아야 한다.
+
+**(3) hybrid k3 는 게이트가 독이다.** 서브 행동(v1 LLM=0, v2 forced=0)이 같은데
+rebuffering 이 정확히 같은 값(58.33 s)으로 발산 — **응답 방식과 무관한 순수
+결정론적 폐루프 발산** ([[SERVE_GATE_DIAGNOSIS]] mechanism b). 2–3개 결정 교란이
+이 조건에서는 항상 나쁜 방향으로 궤적을 옮긴다.
+
+### 9.8 Task 1 최종 판정 — **배치 후보 1개 (좁고 표적화됨)**
+
+| | 결과 |
+|---|---|
+| **배치 후보** | `v_hybrid_k5_f5_cons` — hybrid k5 + serve gate(**conservative**, **floor 5 s**). 4/4 통과: rebuffering 18.5 → **1.64 s** (A1 6.4 s 의 0.26×), QoE −2.0 → **−0.05 %**, speedup **1.499×** (same-session 대조 m5_ctrl 1.522× 대비 −1.5 %), incidence 0.559 → 0.306 %. |
+| **일반화 안 됨** | 같은 게이트가 hybrid k3 에서 rebuffering 을 2.2× 악화, repeat k3/k5 에서 무효. floor 5 s 정확히, conservative mode 정확히여야 함. |
+| **v1 (demote-to-LLM) vs v2 (conservative)** | 같은 발동 조건, 응답만 다름. hybrid k5 에서 v1 은 7.0 s / −1.3 %, v2 는 **1.64 s / −0.05 %**. [[SERVE_GATE_DIAGNOSIS]] 의 "결정론적 최소 개입"이 옳다. |
+| **safe-mode** | 과잉 개입 (trip 115–261). 전 조건 실패. |
+| **처방 3 (buffer tolerance 강화)** | `t_repeat_k3_btol0.5`: rebuffering 32.2 s (악화). 실패. |
+| **근본 해법은 draft-time** | queue 가 drain 을 못 내다보고 stale 행동을 쌓는 것이 원인. serve-time 게이트는 그 증상 중 **가장 집중된 것 하나**만 처리한다. 일반 해법은 drafter 가 예측 버퍼 궤적이 floor 밑으로 내려가는 draft 를 **애초에 enqueue 하지 않는 것** — `mpc_draft.py` / `rl_policy` 변경, [[CHANGE_REQUEST_SERVE_TIME_GATE]] §7 후속. |

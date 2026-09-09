@@ -460,3 +460,36 @@ m5 1.330 vs 1.326). SWEEP_SPEC 의 9 run 은 fallback 지분이 낮아 2-bucket 
   fallback 항을 넣은 3-bucket 형태**를 써야 한다.
 - repeat-last 는 q 를 5× 밀어 올려 모형 곡선을 타고 1.24× 선을 넘겼다 —
   파라미터 스윕이 6.3 pp 부족했던 그 선이다 ([[DRAFTER_ABLATION]] §2).
+
+### 12.5 serve-time 게이트 도입 후 — 모형은 성립, 단 게이트가 새 결정 유형을 만들면 항 추가
+
+[[DRAFTER_ABLATION]] §9 의 serve-time 버퍼 게이트는 queue 엔트리를 fallback 또는
+보수 서브로 강등하므로 결정 유형 구성을 바꾼다. 3-bucket 모형이 그 변화도
+흡수하는지 확인했다.
+
+| config | 게이트 mode | trip 수 | 3-bucket 예측 | 실측 | 오차 |
+|---|---|---:|---:|---:|---:|
+| m5_ctrl (hybrid k5, 게이트 없음) | — | — | 1.527× | 1.522× | +0.3 % |
+| v_hybrid_k5_f5_cons | conservative | **3** | 1.503× | 1.499× | **+0.3 %** |
+| v_hybrid_k5_f5_safe | safe-mode | **115** | 1.498× | 1.529× | **−2.0 %** |
+| v_hybrid_k3_f8_safe | safe-mode | 252 | 1.533× | 1.611× | **−4.9 %** |
+
+- **`conservative` mode: 3-bucket 그대로 성립** (오차 ≤ 0.4 %). trip 이 3개뿐이라
+  강등된 결정을 `c_fall` 로 잘못 계산해도 4700 중 3개라 무시된다. 즉
+  **최소 개입 게이트는 단가 모형에 보이지 않는다.**
+- **`safe-mode`: 4번째 항 필요.** 버퍼 < floor 인 모든 결정을 `low_buffer_safe`
+  로 서브하면 (≈ `c_serve`, LLM·PLM 없음) 115–260건이 생긴다. 이들을 `c_fall`
+  로 계산하면 모형이 2–5 % 과소예측한다 (실제는 훨씬 싸다). 정확한 형태:
+
+  ```
+  mean_latency = (n_verify·c_verify + n_fallback·c_fall
+                  + n_serve·c_serve + n_safe·c_serve) / N
+  ```
+
+  `low_buffer_safe` 서브는 queue serve 와 같은 비용(≈ 2 ms)이므로 사실상
+  `n_serve` 에 합쳐도 된다.
+- **결론:** 모형은 게이트 도입 후에도 유효하다. 게이트가 **기존 결정 유형으로만
+  강등**하면(conservative·fallback) 항 추가 불필요, **새 fast-path 결정 유형을
+  만들면**(safe-mode) 그 유형을 `c_serve` 급으로 한 항 더 넣으면 된다. drafter
+  교체 때 fallback 항이 필수가 된 것(§12.3)과 같은 패턴 — **모형의 골격은
+  유지되고 지배항만 바뀐다.**

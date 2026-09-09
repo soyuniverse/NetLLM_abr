@@ -84,6 +84,17 @@ PHASES=(
   "v_hybrid_k5_f5_cons|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 5.0 --serve-gate-mode conservative|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
   # does v2 rescue the drafter v1 hurt most?
   "v_repeat_k3_f5_safe|--speculative-drafter repeat-last --serve-buffer-floor 5.0 --serve-gate-mode safe-mode|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+
+  # ======================================================================
+  # batch 3 (same freeze 83704a6): does mode=conservative generalise? +
+  # floor response curve on the batch-2 winner (hybrid k5 conservative).
+  # section 9.7.
+  # ======================================================================
+  "v_hybrid_k3_f5_cons|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 5.0 --serve-gate-mode conservative|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+  "v_repeat_k3_f5_cons|--speculative-drafter repeat-last --serve-buffer-floor 5.0 --serve-gate-mode conservative|--speculative-draft-steps 3 --speculative-verification-mode sample ${TOL[*]}"
+  "v_repeat_k5_f5_cons|--speculative-drafter repeat-last --serve-buffer-floor 5.0 --serve-gate-mode conservative|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
+  "v_hybrid_k5_f3_cons|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 3.0 --serve-gate-mode conservative|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
+  "v_hybrid_k5_f8_cons|--speculative-drafter hybrid --speculative-hybrid-buffer-threshold 5.0 --speculative-hybrid-cv-threshold 0.30 --serve-buffer-floor 8.0 --serve-gate-mode conservative|--speculative-draft-steps 5 --speculative-verification-mode sample ${TOL[*]}"
 )
 
 selected() { [ -z "$RUNS" ] && return 0; printf '%s\n' $RUNS | grep -qx "$1"; }

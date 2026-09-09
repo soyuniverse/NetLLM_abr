@@ -216,28 +216,31 @@ def fig3(sweep, out_dir):
 
 # --------------------------------------------------------------------------
 def fig4(t, out_dir):
-    """drafter x [agreement, q, speedup, dQoE, drebuffer] + buffer-band agreement."""
+    """drafter+gate x [agreement, q, speedup, dQoE, drebuffer] + buffer-band agreement."""
+    gate = {r["phase"]: r for r in read_gate()}
     da = {p: json.loads((AB / f"decision_analysis_{p}.json").read_text())
           for p in ("m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3")}
-    names = ["mpc k3", "repeat-last k3", "hybrid k3"]
-    phs = ["m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3"]
+    names = ["repeat-last k3", "hybrid k5\n(no gate)", "hybrid k5\n+ v2 gate (4/4)"]
+    src = [t["m2_repeat_k3"], gate["m5_ctrl"], gate["v_hybrid_k5_f5_cons"]]
 
     metrics = ["draft 1-step\nagreement", "q\n(queue serve)", "speedup\nvs A1",
                "ΔQoE\nvs A1", "Δrebuffer\nvs A1 (s, /50)"]
+    def get(r, k):
+        return fnum(r.get(k))
     vals = []
-    for ph in phs:
-        r = t[ph]
+    for r in src:
         vals.append([
-            fnum(r["draft_1step_rate"]),
-            fnum(r["q_queue_serve"]),
-            fnum(r["speedup_vs_a1"]) - 1.0,      # plotted as delta from parity
-            fnum(r["d_qoe_pct"]) / 100.0,
-            fnum(r["d_rebuffer_s"]) / 50.0,      # scaled to fit
+            get(r, "draft_1step_rate") if "draft_1step_rate" in r else get(r, "draft_1step"),
+            get(r, "q_queue_serve") if "q_queue_serve" in r else get(r, "q"),
+            (get(r, "speedup_vs_a1") or 1.0) - 1.0,
+            (get(r, "d_qoe_pct") or 0.0) / 100.0,
+            (get(r, "d_rebuffer_s") if "d_rebuffer_s" in r else get(r, "d_rebuffer_s")) / 50.0
+                if (r.get("d_rebuffer_s") is not None) else None,
         ])
 
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.6, 3.6),
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.8, 3.6),
                                    gridspec_kw={"width_ratios": [3, 2]})
-    hatches = ["", "////", "xxx"]
+    hatches = ["////", "", "xxx"]
     w = 0.25
     for j, (nm, hz) in enumerate(zip(names, hatches)):
         axL.bar([i + (j - 1) * w for i in range(len(metrics))],
@@ -247,19 +250,20 @@ def fig4(t, out_dir):
     axL.set_xticks(range(len(metrics)))
     axL.set_xticklabels(metrics, fontsize=7)
     axL.set_ylabel("value (fractions; speedup as Δ from 1.0)")
-    axL.set_title("Drafter comparison, k=3")
-    axL.legend(fontsize=7)
+    axL.set_title("Serve gate: hybrid k5 before / after")
+    axL.legend(fontsize=6.5)
 
-    # right: draft 1-step agreement by buffer band
+    # right: draft 1-step agreement by buffer band (the base drafters)
     bands = ["<5s", "5-10s", "10-20s", ">=20s"]
-    for j, ph in enumerate(phs):
+    band_names = ["mpc k3", "repeat-last k3", "hybrid k3"]
+    for j, ph in enumerate(("m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3")):
         by = {b["band"]: b for b in da[ph]["by_buffer"]}
         y = [by[b]["mpc_step1_rate"] if b in by and by[b]["mpc_step1_rate"] is not None
              else None for b in bands]
         axR.plot([i for i, v in enumerate(y) if v is not None],
                  [v for v in y if v is not None],
                  marker=["*", "s", "^"][j], color="black", ls=["-", "--", ":"][j],
-                 label=names[j])
+                 label=band_names[j])
     axR.set_xticks(range(len(bands)))
     axR.set_xticklabels(bands, fontsize=7)
     axR.set_ylabel("draft 1-step agreement")
@@ -267,14 +271,110 @@ def fig4(t, out_dir):
     axR.set_title("Agreement by buffer band")
     axR.legend(fontsize=7)
     save(fig, out_dir, "fig4_drafter_comparison",
-         "Figure 4. Left: the three k=3 drafters on five metrics (this "
-         "instance) -- draft/LLM 1-step agreement, queue-serve share q, speedup "
-         "as delta from 1.0, delta-QoE vs A1, and delta-rebuffer vs A1 (scaled "
-         "/50 s to share the axis). Right: draft 1-step agreement split by "
-         "buffer band. repeat-last agrees with the policy ~88 % everywhere; "
-         "hybrid drops to ~43 % in the <5s band because it routes those "
-         "decisions to mpc (13.8 % of its draft attempts) -- trading agreement "
-         "for the safety shown in DRAFTER_ABLATION.md section S.")
+         "Figure 4. Left: repeat-last k3 and hybrid k5 without / with the v2 "
+         "serve-time gate (conservative, floor 5 s), on five metrics -- draft "
+         "1-step agreement, queue-serve share q, speedup as delta from 1.0, "
+         "delta-QoE vs A1, and delta-rebuffer vs A1 (scaled /50 s to share the "
+         "axis). The gate pulls hybrid k5's delta-QoE and delta-rebuffer back to "
+         "~0 (rebuffering 18.5 -> 1.6 s) at a 1.5 % speedup cost. Right: draft "
+         "1-step agreement split by buffer band -- repeat-last agrees with the "
+         "policy ~88 % everywhere; hybrid drops to ~43 % in the <5s band because "
+         "it routes those decisions to mpc.")
+
+
+SGT = REPO / "results" / "soyun" / "serve_gate_20260909" / "analysis" / "serve_gate_table.csv"
+A1_REB = 6.39172
+
+
+def read_gate():
+    with open(SGT) as f:
+        return list(csv.DictReader(f))
+
+
+def fig5(out_dir):
+    """serve-gate strength (floor) vs rebuffering vs speedup -- v1 fallback / v2."""
+    rows = read_gate()
+    def fx(r, k):
+        try: return float(r[k])
+        except (TypeError, ValueError): return None
+
+    # group: (drafter, k, gate-mode) -> list of (floor, rebuf, speedup, dqoe, npass)
+    groups = {}
+    ctrl = {}
+    for r in rows:
+        key = (r["drafter"], r["k"])
+        pt = (fx(r, "floor_s") or 0.0, fx(r, "rebuffer_s"), fx(r, "speedup_vs_a1"),
+              fx(r, "d_qoe_pct"), int(r["n_pass"]))
+        gate = r["gate"]
+        if gate == "none":
+            ctrl[key] = pt
+        else:
+            groups.setdefault((*key, gate), []).append(pt)
+
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(9.0, 3.8))
+
+    # ---- left: rebuffering vs floor ----
+    style = {"fallback": ("-", "o"), "conservative": ("-", "s"), "safe-mode": (":", "^")}
+    shade = {("repeat-last", "3"): "0.0", ("hybrid", "3"): "0.35",
+             ("hybrid", "5"): "0.0", ("repeat-last", "5"): "0.55"}
+    for (drafter, k, gate), pts in sorted(groups.items()):
+        pts = sorted(p for p in pts if p[1] is not None)
+        if not pts:
+            continue
+        c0 = ctrl.get((drafter, k))
+        xs = ([0.0] + [p[0] for p in pts]) if c0 else [p[0] for p in pts]
+        ys = ([c0[1]] + [p[1] for p in pts]) if c0 else [p[1] for p in pts]
+        ls, mk = style[gate]
+        axL.plot(xs, ys, ls=ls, marker=mk, ms=5,
+                 color=shade.get((drafter, k), "0.4"), lw=1.1,
+                 label=f"{drafter} k{k} · {gate}")
+    axL.axhline(A1_REB, color="0.5", ls="--", lw=0.9)
+    axL.annotate("A1 rebuffering", (0.1, A1_REB), fontsize=7, va="bottom")
+    axL.set_xlabel("serve-gate buffer floor (s); 0 = no gate")
+    axL.set_ylabel("total rebuffering (s)")
+    axL.set_title("Gate strength vs rebuffering")
+    axL.set_ylim(0, 62)
+    axL.legend(fontsize=6, ncol=1, loc="upper left")
+
+    # ---- right: speedup vs rebuffering, every config ----
+    for r in rows:
+        reb, spd, npass = fx(r, "rebuffer_s"), fx(r, "speedup_vs_a1"), int(r["n_pass"])
+        if reb is None or spd is None:
+            continue
+        gate = r["gate"]
+        mk = {"none": "x", "fallback": "o", "conservative": "s", "safe-mode": "^"}.get(gate, ".")
+        fc = "black" if npass == 4 else ("0.6" if gate != "none" else "white")
+        axR.scatter(reb, spd, marker=mk, s=70 if npass == 4 else 34,
+                    facecolor=fc, edgecolor="black", linewidth=0.7, zorder=3)
+    axR.axvline(A1_REB, color="0.5", ls="--", lw=0.9)
+    axR.axhline(1.24, color="0.4", ls="-.", lw=0.9)
+    axR.annotate("1.24x", (55, 1.245), fontsize=7)
+    axR.annotate("A1\nrebuf", (A1_REB + 1, 1.66), fontsize=7)
+    axR.annotate("v2 conservative\nhybrid k5 (4/4)", (1.64, 1.499), fontsize=7,
+                 xytext=(14, 1.40), arrowprops=dict(arrowstyle="->", lw=0.7))
+    axR.set_xlabel("total rebuffering (s)")
+    axR.set_ylabel("speedup vs A1")
+    axR.set_title("All serve-gate configs")
+    axR.set_xlim(-2, 62)
+    from matplotlib.lines import Line2D
+    axR.legend(handles=[
+        Line2D([], [], marker="x", ls="", color="black", label="no gate (control)"),
+        Line2D([], [], marker="o", ls="", mfc="0.6", mec="black", label="v1 fallback"),
+        Line2D([], [], marker="s", ls="", mfc="0.6", mec="black", label="v2 conservative"),
+        Line2D([], [], marker="^", ls="", mfc="0.6", mec="black", label="v2 safe-mode"),
+        Line2D([], [], marker="s", ls="", mfc="black", mec="black", label="4/4 criteria"),
+    ], fontsize=6, loc="lower right")
+    save(fig, out_dir, "fig5_serve_gate_tradeoff",
+         "Figure 5. The serve-time buffer gate. Left: total rebuffering vs the "
+         "gate's buffer-floor threshold (0 = no gate), one line per drafter x "
+         "response mode. v1 'fallback' (demote to an LLM call) makes rebuffering "
+         "worse for every drafter except hybrid k5; v2 'conservative' (serve one "
+         "quality level down, deterministic, no LLM) on hybrid k5 drops "
+         "rebuffering below A1's; v2 'safe-mode' (force every low-buffer decision) "
+         "over-corrects. Right: speedup vs rebuffering for all configs. The one "
+         "config meeting all four pre-fixed criteria is hybrid k5 + v2 "
+         "conservative + floor 5 s (filled square): rebuffering 1.6 s, QoE "
+         "-0.05 % vs A1, speedup 1.50x.")
 
 
 def main():
@@ -290,6 +390,10 @@ def main():
     fig2(t, sweep, out)
     fig3(sweep, out)
     fig4(t, out)
+    try:
+        fig5(out)
+    except FileNotFoundError:
+        print('  fig5 skipped (serve_gate_table.csv not built yet)')
 
 
 if __name__ == "__main__":
