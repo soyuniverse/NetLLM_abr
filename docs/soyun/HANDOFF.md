@@ -16,14 +16,22 @@ repeat-last k3 = **1.419×** at q 37.8 %, draft/LLM 1-step agreement **88 %** (m
 22 runs, freeze `83704a6`).** Task 0 found all three §S.7 prescriptions are
 doable from `abr_spec/` by monkeypatch — **no team file, no `speculative/`
 edit** (`abr_spec/serve_gate.py`, same pattern as `--speculative-drafter`).
-The gate is **not** a general fix ([[SERVE_GATE_DIAGNOSIS]]): demote-to-LLM
-backfires (unsafe LLM sample + closed-loop divergence), and even a deterministic
-conservative serve only helps the one config whose unprotected failure was a
-concentrated cascade. **One 4/4 config: `v_hybrid_k5_f5_cons`** — hybrid k5 +
-serve gate (`conservative`, floor 5 s): rebuffering 18.5 → 1.64 s, QoE −0.05 %,
-speedup 1.499×. [[CHANGE_REQUEST_SERVE_TIME_GATE]] is the promotion request; the
-general fix is at draft time (don't enqueue what won't survive a predicted
-drain). [[NEEDS_UPSTREAM]] #5 (k cap) downgraded to low priority.
+**Outcome: the serve-time gate does not work.** A seed-1 config passed all four
+criteria (`v_hybrid_k5_f5_cons`, rebuffering 18.5 → 1.64 s) but seed {2,3,4} give
+help 1 / inert 2 / hurt 1 (§9.9), and re-measured with per-episode RNG
+re-seeding the gate changes **1 decision** and moves rebuffering by **0** (§9.11)
+— the seed-1 win was a coincidental alignment between where the gate trips and
+where that RNG stream's pathological cascade landed.
+
+**The real finding — [[TRAJECTORY_DIVERGENCE]] (the session's best result).**
+`test.py` seeds the eval RNG once for all 100 traces, so (a) any mid-run
+intervention contaminates every later trace (3 gate trips → 27 % sustained
+downstream action-mismatch, 45/100 traces) and (b) the un-gated baseline itself
+is a seed lottery (hybrid k5 rebuffering 0.49 / 4.24 / 18.5 / 25.6 s across
+seeds). **The drafter ablation's "conditional success" is a seed-1 statement.**
+Next: [[NEEDS_UPSTREAM]] #6 (re-seed per episode) and the draft-time fix
+([[CHANGE_REQUEST_SERVE_TIME_GATE]] §7). [[NEEDS_UPSTREAM]] #5 (k cap) low
+priority.
 
 ---
 
@@ -140,26 +148,37 @@ reference. Two frozen-path issues were found and fixed *before* the freeze
 (DRAFTER_ABLATION §0): `decision_trace.py` did not instrument repeat-last/hybrid,
 and k=8 is impossible without editing read-only `run_plm.py`.
 
-### Action 4 — serve-gate investigation — DONE 2026-09-09 (§8–§9, [[SERVE_GATE_DIAGNOSIS]])
+### Action 4 — serve-gate investigation — DONE 2026-09-09 (§8–§9.11)
 
-All three §S.7 prescriptions were prototyped from `abr_spec/` (monkeypatch, no
-team file). The serve gate does not generalise; one 4/4 config found
-(`v_hybrid_k5_f5_cons`). [[CHANGE_REQUEST_SERVE_TIME_GATE]] awaits review.
+Prototyped from `abr_spec/` (monkeypatch, no team file). **Verdict: the gate is
+inert under proper measurement — not recommended** ([[CHANGE_REQUEST_SERVE_TIME_GATE]]
+§7). The valuable output is [[TRAJECTORY_DIVERGENCE]] and [[NEEDS_UPSTREAM]] #6.
 
-### Action 5 — remaining, in priority order
+### Action 5 — remaining, in priority order (GPU costs in [[PAPER_ASSETS_ABR]] §5)
 
-1. **Draft-time drain-aware enqueue (the general fix).** `sample_speculative`'s
-   enqueue loop / the drafter should skip a queue entry whose `rollout.
-   predicted_buffers` dips below a floor. Touches `plm_special/speculative/
-   mpc_draft.py` + `rl_policy.py` — scope a second change request. Would protect
-   every drafter, unlike the serve gate.
-2. **`v_hybrid_k5_f5_cons` robustness** — one seed, one trace set. If it is to be
-   the operating point, re-run across seeds 2/3/4 and confirm the trace-94
-   cascade fix is not seed-luck (~15 min GPU).
-3. **[[NEEDS_UPSTREAM]] #4** — `recent-timestep` fp16 NaN still blocks 1 of the 6
-   README conditions; not soyun's to fix.
-- **[[NEEDS_UPSTREAM]] #5** (k=8 cap) — LOW PRIORITY: speedup *decreases* k3→k5,
-  so k=8 buys nothing for this drafter family.
+1. **[[NEEDS_UPSTREAM]] #6 — re-seed the eval RNG per episode** (`test.py`, ~1 line,
+   not soyun's). Blocks a clean read of any serve-/draft-time A/B. The opt-in
+   diagnostic `abr_spec/reseed_per_episode.py` exists for local use meanwhile.
+2. **drafter ablation across seeds.** m2/m3/m4/m5/M6 at seed 2–4 → report
+   rebuffering/QoE as mean±std, not the seed-1 point (§9.10). ~75 min GPU.
+3. **Draft-time drain-aware enqueue (the general fix).** Skip a queue entry whose
+   `rollout.predicted_buffers` dips below a floor. `mpc_draft.py` + `rl_policy.py`
+   → a second change request. Protects every drafter.
+4. **[[NEEDS_UPSTREAM]] #4** — `recent-timestep` fp16 NaN, not soyun's.
+- **[[NEEDS_UPSTREAM]] #5** (k=8 cap) — LOW: speedup decreases k3→k5.
+
+### Scratchpad → committed file map (session 2026-09-08/09)
+
+The session scratchpad (`/tmp/claude-0/.../scratchpad/`, 604 KB, **not deleted**)
+holds one-off drivers and logs that are superseded by committed files:
+
+| scratchpad | superseded by (committed) |
+|---|---|
+| `run_ablation.sh`, `run_determinism.sh` | `abr_spec/run_drafter_ablation.sh`, `abr_spec/run_determinism_check.sh` |
+| `run_batch3.sh`, `run_seeds.sh`, `run_v1_seeds.sh`, `run_reseed.sh` | phases folded into `abr_spec/run_serve_gate.sh` (batch 3) / documented in DRAFTER_ABLATION §9.9, §9.11 |
+| `serve_gate_v2.py`, `serve_gate_v2_notes.md`, `fig5_snippet.py`, `gate_proto_test.py`, `patchtest*.py` | `abr_spec/serve_gate.py` (v2), `abr_spec/make_figures.py` (fig5/6) |
+| `*.log` (ablation/determinism/serve_gate/seeds/reseed) | `results/soyun/*/logs/*.log` (gitignored) + the committed `manifest.json` / `summary.json` |
+| `synth.jsonl`, `qs_test/` | throwaway test fixtures for `queue_safety.py` |
 
 ### Not planned unless asked
 
