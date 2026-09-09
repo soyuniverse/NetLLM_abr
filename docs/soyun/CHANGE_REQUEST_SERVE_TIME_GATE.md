@@ -1,8 +1,8 @@
-# CHANGE_REQUEST — promote the serve-time buffer gate to a first-class flag
+# CHANGE_REQUEST — serve-time buffer gate: investigated, **not recommended**
 
 **From:** soyun (speculative inference) · **Branch:** `soyun/spec-abr` · **Date:** 2026-09-09
 **To:** `run_plm.py` / speculative-CLI owner (`suy2136`), `rl_policy.py` owner
-**Status:** DRAFT — awaiting review
+**Status:** DRAFT — **recommendation: do not promote** (§7); take NEEDS_UPSTREAM #6 instead
 **Prerequisite reading:** [[DRAFTER_ABLATION]] §S.7, §8, §9 · [[SERVE_GATE_DIAGNOSIS]]
 
 ---
@@ -16,11 +16,13 @@ before `run_plm.py` runs. That is the **same pattern** the fork already uses to
 inject the drafter choice (`abr_spec/drafter_select.py`; `run_plm.py` builds the
 drafter at a single hard-coded site, [[NEEDS_UPSTREAM]] closing note).
 
-This request is to **promote** that validated knob to a first-class
-`run_plm.py` CLI flag, so it works on a bare `run_plm.py` invocation and not only
-through soyun's wrapper. If the team would rather it stay on the wrapper (the
-same disposition as `--speculative-drafter`), this request reduces to an
-acknowledgement and no code changes.
+**Outcome (§7): do not promote it.** Once measured properly — across seeds and
+with per-episode RNG re-seeding — the gate has no effect: it changes one decision
+and moves rebuffering by zero (§9.9, §9.11). Its one seed-1 "win" was a
+coincidental alignment between where the gate fires and where that RNG stream's
+pathological cascade landed. The §3 diff below is kept as a record of what a
+first-class flag *would* cost; §7 says what to do instead
+([[NEEDS_UPSTREAM]] #6 + a draft-time change request).
 
 ## 1. Why the gate exists
 
@@ -40,14 +42,15 @@ several chunks earlier when the buffer was comfortable. The gate refuses those.
   ([[SERVE_GATE_DIAGNOSIS]]): the sample-mode LLM picks an unsafe bitrate in a
   drained buffer (repeat k5 gate trip: action 4 at buffer 4.0 s → 12.6 s
   rebuffer), and perturbing 2–5 decisions diverges the closed loop.
-- **`mode=conservative` (serve one quality level down, deterministic, no LLM)
-  on hybrid k5 + floor 5 s is the one 4/4 config** (§9.8): rebuffering 18.5 →
-  **1.64 s** (Δ vs A1 −4.8 s), QoE −1.97 → **−0.05 %**, speedup **1.499×**,
-  incidence 0.56 → 0.31 %. Only 3 gate trips.
-- **`mode=safe-mode`** (force every low-buffer decision) over-corrects (115–261
-  trips) and fails everywhere. **`conservative` does not generalise** to
-  hybrid k3 (rebuffering 26.9 → 58.3 s — trajectory divergence) or repeat k3/k5
-  (neutral).
+- **`mode=conservative` on hybrid k5 + floor 5 s passed all four criteria at
+  seed 1** (rebuffering 18.5 → 1.64 s, QoE −0.05 %) — **but this does not
+  survive scrutiny**: seed {2,3,4} give help 1 / inert 2 / hurt 1 (§9.9), and
+  under per-episode re-seeding the gate changes 1 decision and moves rebuffering
+  by 0 (§9.11). The seed-1 win was a coincidental trip/cascade alignment.
+- `mode=safe-mode` over-corrects (115–261 trips) and fails everywhere;
+  `conservative` also hurts hybrid k3 (+31 s) and is inert on repeat k3/k5.
+- **The dominant effect is the seed lottery in the un-gated baseline**
+  ([[TRAJECTORY_DIVERGENCE]]) — see §7.
 
 ## 3. The ask — minimal diff (~11 lines, 3 files; team files ≈ 6 lines)
 
@@ -148,26 +151,30 @@ If §3 is declined, the disposition is: *`--serve-buffer-floor` lives on the
 wrapper, like `--speculative-drafter`* — and this document is closed as
 acknowledged.
 
-## 7. Recommended default and the general fix
+## 7. Recommendation — **do not promote this; take the eval-harness fix instead**
 
-**The gate stays opt-in** (`--speculative-serve-buffer-floor 0`, `mode=fallback`
-in §3). It is **not** a general safety fix — see §2 and
-[[SERVE_GATE_DIAGNOSIS]]. The one configuration that passes all four judgement
-criteria (DRAFTER_ABLATION §9.8) is narrow:
+**Do not promote the serve gate.** The one config that passed all four criteria
+at seed 1 (`hybrid k5 + conservative + floor 5 s`, rebuffering 18.5 → 1.64 s) is
+**not real**: seed {2,3,4} give help 1 / inert 2 / hurt 1 (DRAFTER_ABLATION
+§9.9), and re-measured with per-episode re-seeding
+(`abr_spec/reseed_per_episode.py`) the gate changes **one decision** and moves
+rebuffering **by zero** (§9.11). The seed-1 4/4 was a coincidental alignment
+between where the gate trips and where that RNG stream's pathological cascade
+happened to land.
 
-| | value |
-|---|---|
-| drafter | `hybrid`, k = 5 (`--speculative-draft-steps 5`, `--speculative-hybrid-buffer-threshold 5.0`) |
-| gate | `--speculative-serve-buffer-floor 5.0 --speculative-serve-gate-mode conservative` |
-| result | rebuffering 18.5 → **1.64 s** (0.26× A1), QoE −1.97 → **−0.05 %**, speedup **1.499×** (−1.5 % vs the same-session control), incidence C 0.559 → 0.306 % |
-| why it works | that drafter/k's unprotected `< 5 s` queue serves caused a 13 s rebuffer cascade on one trace (stale-high queue); 3 conservative serves at the drain start prevent it |
-| why it does not generalise | the same gate raises hybrid k3's rebuffering 26.9 → 58.3 s (deterministic trajectory divergence from 2–3 perturbed decisions); floor must be **exactly** 5 s (3 s is a no-op, 8 s over-triggers); `safe-mode` over-corrects everywhere |
+So §3's diff is **not worth taking**. If the team wants the wrapper-side
+`--serve-buffer-floor` acknowledged as a research knob (like `--speculative-drafter`),
+that is fine; a first-class flag adds nothing.
 
-So the `mode=conservative` follow-up diff to `rl_policy.py` (§3b, ~6 lines) is
-worth taking **only if the team also adopts hybrid k5 as the speculative
-operating point** — otherwise the useful default is still 0.
+**Two things are worth doing instead:**
 
-**The general fix is at draft time, not serve time.** The root cause is that the
+1. **[[NEEDS_UPSTREAM]] #6 — re-seed the eval RNG per episode** (`test.py`,
+   ~1 line). `set_random_seed` currently runs once for all 100 traces, so any
+   mid-run intervention contaminates later traces and the un-gated baseline is a
+   seed lottery (hybrid k5 rebuffering 0.49 / 4.24 / 18.5 / 25.6 s across seeds).
+   This blocks a clean read of *any* serve-time or draft-time A/B, not just this
+   gate. It does not change a single-config result.
+2. **The draft-time fix (a separate change request).** The root cause is that the
 drafter enqueues actions it cannot stand behind once the buffer drains. A
 principled fix: the drafter (or `sample_speculative`'s enqueue loop) should not
 enqueue a queue entry whose **predicted** buffer trajectory (`rollout.

@@ -42,12 +42,17 @@ drafter (직전 행동을 k번 반복) 가 LLM 의 다음 행동을 step-1 에�
 파일 없이 abr_spec/ monkeypatch 로 검증 가능함을 확인했다 (Task 0, §8). 게이트
 자체는 **hybrid k5 에서만** 효과가 있고 — 그 조건의 무방비 실패가 한 trace 의
 13 s rebuffer 캐스케이드로 집중돼 있어서다 — 다른 drafter/k 에서는 2–3개 결정
-교란이 폐루프를 더 나쁜 궤적으로 옮긴다 ([[SERVE_GATE_DIAGNOSIS]]). **배치 후보:
-`v_hybrid_k5_f5_cons` = hybrid k5 + serve gate(mode `conservative`, floor 5 s).**
-4개 사전 판정 기준 전부 통과: rebuffering 18.5 → **1.64 s** (A1 6.4 s 의 0.26×),
-QoE −1.97 → **−0.05 %**, speedup **1.499×** (same-session 대조 1.522× 대비 −1.5 %),
-incidence 0.559 → 0.306 %. 좁고 표적화된 패치이며, 일반 해법은 drafter 가 예측
-drain 을 못 넘는 draft 를 애초에 enqueue 하지 않는 것 (§9.8, [[CHANGE_REQUEST_SERVE_TIME_GATE]] §7).
+교란이 폐루프를 더 나쁜 궤적으로 옮긴다 ([[SERVE_GATE_DIAGNOSIS]]). seed 1 에서 4/4 를 통과하는 config
+(`v_hybrid_k5_f5_cons`) 를 찾았으나 **배치 후보 아님**: seed {2,3,4} 에서 도움
+1 / 무효 2 / 손해 1 (§9.9), 그리고 **오염 없는 per-episode seeding 으로 재측정하면
+게이트는 행동 1개만 바꾸고 rebuffering 영향이 0** (§9.11) — seed 1 의 4/4 는
+게이트 trip 과 캐스케이드 trace 가 우연히 겹친 결과였다.
+**더 큰 발견 — 무방비 hybrid k5 의 rebuffering 은 seed 복권이다**
+(0.49 / 4.24 / 18.5 / 25.6 s across seed 1–4). §2 의 "조건부 성공 /
+rebuffering A1 의 2.9–5.8×" 는 seed 1 진술이며, drafter ablation 전체를
+seed 3–4개로 재검토해야 한다 (§9.10). 원인은 공유 RNG 스트림 + rebuffering 을
+1–2개 trace 가 지배하는 구조 ([[TRAJECTORY_DIVERGENCE]] — 이번 연구의
+방법론적 핵심 성과).
 
 ---
 
@@ -656,11 +661,14 @@ rebuffering 이 정확히 같은 값(58.33 s)으로 발산 — **응답 방식�
 결정론적 폐루프 발산** ([[SERVE_GATE_DIAGNOSIS]] mechanism b). 2–3개 결정 교란이
 이 조건에서는 항상 나쁜 방향으로 궤적을 옮긴다.
 
-### 9.8 Task 1 최종 판정 — **배치 후보 1개 (좁고 표적화됨)**
+### 9.8 Task 1 최종 판정 — **seed 1 에서 4/4 인 config 1개 (§9.9 에서 미확정)**
 
-| | 결과 |
+> ⚠ 아래 표의 `v_hybrid_k5_f5_cons` 는 **seed 1 결과**다. §9.9 의 seed {2,3,4}
+> 재실행 결과 **배치 후보로 확정되지 않았다** — §9.10 참조.
+
+| | 결과 (seed 1) |
 |---|---|
-| **배치 후보** | `v_hybrid_k5_f5_cons` — hybrid k5 + serve gate(**conservative**, **floor 5 s**). 4/4 통과: rebuffering 18.5 → **1.64 s** (A1 6.4 s 의 0.26×), QoE −2.0 → **−0.05 %**, speedup **1.499×** (same-session 대조 m5_ctrl 1.522× 대비 −1.5 %), incidence 0.559 → 0.306 %. |
+| **seed 1 4/4 config** | `v_hybrid_k5_f5_cons` — hybrid k5 + serve gate(**conservative**, **floor 5 s**). rebuffering 18.5 → **1.64 s** (A1 6.4 s 의 0.26×), QoE −2.0 → **−0.05 %**, speedup **1.499×** (same-session 대조 m5_ctrl 1.522× 대비 −1.5 %), incidence 0.559 → 0.306 %. |
 | **일반화 안 됨** | 같은 게이트가 hybrid k3 에서 rebuffering 을 2.2× 악화, repeat k3/k5 에서 무효. floor 5 s 정확히, conservative mode 정확히여야 함. |
 | **v1 (demote-to-LLM) vs v2 (conservative)** | 같은 발동 조건, 응답만 다름. hybrid k5 에서 v1 은 7.0 s / −1.3 %, v2 는 **1.64 s / −0.05 %**. [[SERVE_GATE_DIAGNOSIS]] 의 "결정론적 최소 개입"이 옳다. |
 | **safe-mode** | 과잉 개입 (trip 115–261). 전 조건 실패. |
@@ -707,5 +715,54 @@ determinism 배터리(§1)는 *같은* config 의 재현성만 봤을 뿐, 결�
 측정하지 않았다. drafter ablation 전체(m2/m3/m4/m5/M6)를 seed 3–4개로 재실행해
 평균·분산으로 다시 봐야 한다 — [[HANDOFF]] Action 5 로 이월.
 
-**(4) [[TRAJECTORY_DIVERGENCE]] 예측 검증.** "v2 가 v1 보다 seed 전반에서 일관"
-— v1(demote-to-LLM)을 seed {2,3,4} 로도 실행해 대조: `<V1_SEED_RESULT>`.
+**(4) [[TRAJECTORY_DIVERGENCE]] 예측 검증 — 부분 확인.** v1(demote-to-LLM)도
+seed {2,3,4} 로 실행 (`v_hybrid_k5_f5_fb_s{2,3,4}`):
+
+| seed | m5 (게이트 없음) | v1 fallback | v2 conservative |
+|---:|---:|---:|---:|
+| 1 | 18.51 | 7.00 | **1.64** |
+| 2 | 4.24 | 3.92 (trace 이동) | 4.24 (no-op) |
+| 3 | 25.59 | 29.87 | 29.87 |
+| 4 | 0.49 | 0.49 | 0.49 |
+| **mean / std** | 12.2 / 10.2 | 10.3 / 11.5 | 9.1 / 12.1 |
+
+- **결정 단위에서는 예측이 맞다** (§9 분석): 게이트 무발동 seed(2·4)에서 v2 는
+  **완전 무효**(byte-identical), v1 은 항상 교란(seed 2 에서 trace 64→70 이동).
+- **결과 단위에서는 seed 복권이 게이트 효과를 압도한다.** ctrl rebuffering 의
+  std(10.2)가 게이트의 mean 개선(12.2→9.1)보다 크다. seed 3 에서는 v1·v2 둘 다
+  +4.3 s 악화 (서로 다른 궤적으로 우연히 같은 총량).
+- 즉 **v2 가 "더 안전한 개입"인 것은 맞지만**(무발동 시 무효, 발동 시 최소 교란),
+  이 config 의 배치 가치는 개입 방식이 아니라 **어느 seed 를 뽑느냐**가 정한다.
+
+### 9.10 Task 1 결론 — 배치 후보 미확정, drafter ablation 전체 재검토 필요
+
+`v_hybrid_k5_f5_cons` 는 **배치 후보로 확정하지 않는다.** 4 seed 중 게이트가
+도움 1 (seed 1) / 무효 2 (seed 2·4) / 손해 1 (seed 3). seed 1 의 4/4 는 그 seed 의
+특정 병리를 우연히 잡은 결과다.
+
+**이월 (HANDOFF Action 5):** drafter ablation 의 조건부-성공 판정 자체가 seed 1
+단독 측정이므로, **m2·m3·m4·m5·M6 를 seed 2–4 로 재실행**해 rebuffering·QoE 를
+평균·분산으로 다시 봐야 한다. 예상 GPU: 5 config × 3 seed ≈ 75 분. seed
+민감도가 이렇게 큰 이유(공유 RNG 스트림 + rebuffering 을 1–2개 trace 가 지배)는
+[[TRAJECTORY_DIVERGENCE]] §3.
+
+### 9.11 오염 없는 검정 — 게이트는 사실상 무효 (Task 2)
+
+`abr_spec/reseed_per_episode.py` (opt-in, `--probe reseed_per_episode`,
+`OfflineRLPolicy.clear_dq` 직후 `seed + trace_i` 로 재시드 → trace 간 독립)로
+seed 1 A/B 를 재실행:
+
+| | rebuf (s) | ΔQoE % | rebuf 지배 trace |
+|---|---:|---:|---|
+| seed-once m5_ctrl | 18.51 | −1.97 | 94 (13.1) |
+| seed-once v2 gate | **1.64** | −0.05 | 94 → 0.4 |
+| reseed/ep m5_ctrl | 18.40 | −0.34 | **53 (15.3)** |
+| reseed/ep v2 gate | **18.40** | −0.33 | **53 (15.3) — trace별 완전 동일** |
+
+오염 없는 seeding 에서 게이트는 **trip 1건, 행동 1개 변경(trace 57),
+rebuffering 영향 0**. 캐스케이드가 trace 94 → 53 으로 이동했고 게이트 trip(57)이
+거기 안 맞는다. **즉 seed 1 의 4/4 는 게이트 trip 위치와 캐스케이드 위치가
+우연히 겹친 결과였다** — 특정 (오염된) RNG 스트림이 만든 정렬이고 per-episode
+seeding 이 없앤다. 제대로 재면 serve-time 게이트는 **무효** — 문제가 있는 자리에
+있질 않다. 실제 해법은 draft-time([[CHANGE_REQUEST_SERVE_TIME_GATE]] §7)과 eval
+harness([[NEEDS_UPSTREAM]] #6). 상세 [[TRAJECTORY_DIVERGENCE]] §6.

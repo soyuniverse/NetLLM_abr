@@ -108,3 +108,29 @@ both the RNG shift and the direct trajectory perturbation.
 `results/soyun/figures/fig6_trajectory_divergence.png` — post-trip action-mismatch
 rate vs downstream distance, v1 fallback vs v2 conservative, with the per-trace
 rebuffer bars (m5_ctrl / v1 / v2) inset.
+
+## 6. Confirmation — the un-contaminated paired A/B (`reseed_per_episode`)
+
+`abr_spec/reseed_per_episode.py` (opt-in, `--probe reseed_per_episode`)
+re-seeds `random`/`numpy`/`torch` with `seed + trace_i` at every episode
+boundary (`OfflineRLPolicy.clear_dq`), making every trace independent. Re-ran
+the seed-1 A/B under it (`m5_ctrl_reseed` / `v_hybrid_k5_f5_cons_reseed`):
+
+| | rebuf (s) | ΔQoE % | rebuf by trace |
+|---|---:|---:|---|
+| seed-once  m5_ctrl (contaminated) | 18.51 | −1.97 | 52, 64, **94 (13.1)** |
+| seed-once  v2 gate | **1.64** | −0.05 | 52, **94 → 0.4** |
+| **reseed/ep  m5_ctrl** | **18.40** | −0.34 | 33, **53 (15.3)**, 74 |
+| **reseed/ep  v2 gate** | **18.40** | −0.33 | 33, **53 (15.3)**, 74 — **identical** |
+
+Under un-contaminated seeding the gate fires **1 trip**, changes **1 decision**
+(trace 57), and has **zero** rebuffering effect. The pathological cascade moved
+from trace 94 to trace 53; the gate trip (trace 57) does not line up with it.
+
+**So `v_hybrid_k5_f5_cons`'s seed-1 4/4 was a coincidental alignment** between
+where the gate trips and where the cascade is — an alignment the specific
+(contaminated) RNG stream produced and per-episode seeding removes. Cleanly
+measured, the serve-time gate is inert: it neither helps nor hurts, it just
+isn't where the problem is. The real fixes are draft-time (don't enqueue stale
+actions, [[CHANGE_REQUEST_SERVE_TIME_GATE]] §7) and the eval harness
+([[NEEDS_UPSTREAM]] #6).
