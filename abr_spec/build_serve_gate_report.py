@@ -82,7 +82,7 @@ def main():
             drafter = "hybrid" if "hybrid" in ph else ("repeat-last" if "repeat" in ph else "?")
             k = 5 if "k5" in ph else 3
         floor = sg.get("floor_seconds", 0.0)
-        mode = sg.get("mode") or ("fallback" if floor else "none")
+        mode = "none" if not floor else (sg.get("mode") or "fallback")
 
         c_total = "PASS" if dreb <= DREB_MAX else "FAIL"
         c_incid = "PASS" if (C is not None and C <= MPC_C) else ("FAIL" if C is not None else "?")
