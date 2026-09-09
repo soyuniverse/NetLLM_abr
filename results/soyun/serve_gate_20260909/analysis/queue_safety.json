@@ -494,7 +494,7 @@
     "total_rebuffer_s_run": 7.4838879804629075,
     "window_W": 3
   },
-  "m2_repeat_k3": {
+  "m2_ctrl": {
     "A_direct": {
       "llm_served_mean_s": 0.007081743241208302,
       "llm_served_n": 2925,
@@ -552,11 +552,11 @@
     "decisions": 4700,
     "queue_serve_n": 1775,
     "queue_serve_share": 0.3776595744680851,
-    "source": "results/soyun/drafter_ab_20260908/m2_repeat_k3/decisions.jsonl",
+    "source": "results/soyun/serve_gate_20260909/m2_ctrl/decisions.jsonl",
     "total_rebuffer_s_run": 23.8454406960976,
     "window_W": 3
   },
-  "m3_hybrid_k3": {
+  "m3_ctrl": {
     "A_direct": {
       "llm_served_mean_s": 0.00911383139157094,
       "llm_served_n": 2948,
@@ -614,11 +614,11 @@
     "decisions": 4700,
     "queue_serve_n": 1752,
     "queue_serve_share": 0.3727659574468085,
-    "source": "results/soyun/drafter_ab_20260908/m3_hybrid_k3/decisions.jsonl",
+    "source": "results/soyun/serve_gate_20260909/m3_ctrl/decisions.jsonl",
     "total_rebuffer_s_run": 26.867574942351133,
     "window_W": 3
   },
-  "m5_hybrid_k5": {
+  "m5_ctrl": {
     "A_direct": {
       "llm_served_mean_s": 0.0028759743668133877,
       "llm_served_n": 2733,
@@ -676,7 +676,7 @@
     "decisions": 4700,
     "queue_serve_n": 1967,
     "queue_serve_share": 0.41851063829787233,
-    "source": "results/soyun/drafter_ab_20260908/m5_hybrid_k5/decisions.jsonl",
+    "source": "results/soyun/serve_gate_20260909/m5_ctrl/decisions.jsonl",
     "total_rebuffer_s_run": 18.505523927422857,
     "window_W": 5
   },
@@ -741,5 +741,647 @@
     "source": "results/soyun/serve_gate_20260909/t_repeat_k3_btol0p5/decisions.jsonl",
     "total_rebuffer_s_run": 32.1925751512669,
     "window_W": 3
+  },
+  "v_hybrid_k3_f5_cons": {
+    "A_direct": {
+      "llm_served_mean_s": 0.019712722639310083,
+      "llm_served_n": 2959,
+      "queue_serve_mean_s": 0.0,
+      "queue_serve_n": 1741
+    },
+    "B_lagged": {
+      "n": 3042,
+      "post_queue_offsets_1..W_mean_s": 0.0040845340588968725,
+      "run_mean_s": 0.01241062687015288
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1741,
+      "rate": 0.0022975301550832855,
+      "vs_mpc_ref_ratio": 0.39747271682940843,
+      "window_union_decisions": 3314,
+      "window_union_rebuffer_s": 12.425152607164287,
+      "window_union_share_of_run_rebuffer": 0.21301498454070056,
+      "windows_with_rebuffer_event": 4
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.33416123533036446,
+        "A_queue_direct_mean_s": null,
+        "C_window_incidence": null,
+        "band": "<5s",
+        "queue_serve_n": 0,
+        "window_union_rebuffer_s": 4.305410895660201
+      },
+      {
+        "A_llm_direct_mean_s": 0.044202834530705636,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.00980392156862745,
+        "band": "5-10s",
+        "queue_serve_n": 102,
+        "window_union_rebuffer_s": 5.791539345465456
+      },
+      {
+        "A_llm_direct_mean_s": 0.022499363424055195,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0035460992907801418,
+        "band": "10-20s",
+        "queue_serve_n": 282,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0009782362882515248,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0014738393515106854,
+        "band": ">=20s",
+        "queue_serve_n": 1357,
+        "window_union_rebuffer_s": 2.3282023660386293
+      }
+    ],
+    "decisions": 4700,
+    "queue_serve_n": 1741,
+    "queue_serve_share": 0.37042553191489364,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k3_f5_cons/decisions.jsonl",
+    "total_rebuffer_s_run": 58.329946289718535,
+    "window_W": 3
+  },
+  "v_hybrid_k3_f5_safe": {
+    "A_direct": {
+      "llm_served_mean_s": 0.003168671906096443,
+      "llm_served_n": 2857,
+      "queue_serve_mean_s": 8.78373251368313e-05,
+      "queue_serve_n": 1726
+    },
+    "B_lagged": {
+      "n": 3018,
+      "post_queue_offsets_1..W_mean_s": 0.0020086588005704714,
+      "run_mean_s": 0.0020084012347597008
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1726,
+      "rate": 0.002317497103128621,
+      "vs_mpc_ref_ratio": 0.40092699884125144,
+      "window_union_decisions": 3282,
+      "window_union_rebuffer_s": 6.062132260121683,
+      "window_union_share_of_run_rebuffer": 0.6586050711318597,
+      "windows_with_rebuffer_event": 4
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.052289245582207454,
+        "A_queue_direct_mean_s": 0.0017034519459120316,
+        "C_window_incidence": 0.011235955056179775,
+        "band": "5-10s",
+        "queue_serve_n": 89,
+        "window_union_rebuffer_s": 6.062132260121683
+      },
+      {
+        "A_llm_direct_mean_s": 0.0032690245775799007,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0070921985815602835,
+        "band": "10-20s",
+        "queue_serve_n": 282,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0007380073800738007,
+        "band": ">=20s",
+        "queue_serve_n": 1355,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4583,
+    "queue_serve_n": 1726,
+    "queue_serve_share": 0.37660920794239583,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k3_f5_safe/decisions.jsonl",
+    "total_rebuffer_s_run": 9.204502858903709,
+    "window_W": 3
+  },
+  "v_hybrid_k3_f8_safe": {
+    "A_direct": {
+      "llm_served_mean_s": 0.0021277516417811363,
+      "llm_served_n": 2788,
+      "queue_serve_mean_s": 0.0,
+      "queue_serve_n": 1660
+    },
+    "B_lagged": {
+      "n": 2899,
+      "post_queue_offsets_1..W_mean_s": 0.0,
+      "run_mean_s": 0.0013336716675552626
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1660,
+      "rate": 0.0,
+      "vs_mpc_ref_ratio": 0.0,
+      "window_union_decisions": 3164,
+      "window_union_rebuffer_s": 0.0,
+      "window_union_share_of_run_rebuffer": 0.0,
+      "windows_with_rebuffer_event": 0
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.07605348176007445,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "5-10s",
+        "queue_serve_n": 17,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "10-20s",
+        "queue_serve_n": 295,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": ">=20s",
+        "queue_serve_n": 1348,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4448,
+    "queue_serve_n": 1660,
+    "queue_serve_share": 0.3732014388489209,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k3_f8_safe/decisions.jsonl",
+    "total_rebuffer_s_run": 5.932171577285808,
+    "window_W": 3
+  },
+  "v_hybrid_k5_f3_cons": {
+    "A_direct": {
+      "llm_served_mean_s": 0.0028759743668133877,
+      "llm_served_n": 2733,
+      "queue_serve_mean_s": 0.0054120416791671915,
+      "queue_serve_n": 1967
+    },
+    "B_lagged": {
+      "n": 3450,
+      "post_queue_offsets_1..W_mean_s": 0.004153385429145883,
+      "run_mean_s": 0.003937345516472949
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1967,
+      "rate": 0.005592272496187087,
+      "vs_mpc_ref_ratio": 0.9674631418403661,
+      "window_union_decisions": 3670,
+      "window_union_rebuffer_s": 17.660045830434214,
+      "window_union_share_of_run_rebuffer": 0.9543121232176652,
+      "windows_with_rebuffer_event": 11
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.05463842533162172,
+        "A_queue_direct_mean_s": 1.4618144939293933,
+        "C_window_incidence": 0.7142857142857143,
+        "band": "<5s",
+        "queue_serve_n": 7,
+        "window_union_rebuffer_s": 16.024374542657657
+      },
+      {
+        "A_llm_direct_mean_s": 0.01723637382790905,
+        "A_queue_direct_mean_s": 0.003498173944204347,
+        "C_window_incidence": 0.00847457627118644,
+        "band": "5-10s",
+        "queue_serve_n": 118,
+        "window_union_rebuffer_s": 1.6356712877765585
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.011627906976744186,
+        "band": "10-20s",
+        "queue_serve_n": 344,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0006675567423230974,
+        "band": ">=20s",
+        "queue_serve_n": 1498,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4700,
+    "queue_serve_n": 1967,
+    "queue_serve_share": 0.41851063829787233,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k5_f3_cons/decisions.jsonl",
+    "total_rebuffer_s_run": 18.505523927422857,
+    "window_W": 5
+  },
+  "v_hybrid_k5_f5_cons": {
+    "A_direct": {
+      "llm_served_mean_s": 0.00044679823250290304,
+      "llm_served_n": 2737,
+      "queue_serve_mean_s": 0.00021028248874993018,
+      "queue_serve_n": 1963
+    },
+    "B_lagged": {
+      "n": 3462,
+      "post_queue_offsets_1..W_mean_s": 0.00047246426567780427,
+      "run_mean_s": 0.0003480151676120337
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1963,
+      "rate": 0.003056546102903719,
+      "vs_mpc_ref_ratio": 0.5287824758023434,
+      "window_union_decisions": 3683,
+      "window_union_rebuffer_s": 1.6356712877765585,
+      "window_union_share_of_run_rebuffer": 1.0,
+      "windows_with_rebuffer_event": 6
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": null,
+        "C_window_incidence": null,
+        "band": "<5s",
+        "queue_serve_n": 0,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.01019072301967038,
+        "A_queue_direct_mean_s": 0.0036855761197867225,
+        "C_window_incidence": 0.008928571428571428,
+        "band": "5-10s",
+        "queue_serve_n": 112,
+        "window_union_rebuffer_s": 1.6356712877765585
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.011363636363636364,
+        "band": "10-20s",
+        "queue_serve_n": 352,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.00066711140760507,
+        "band": ">=20s",
+        "queue_serve_n": 1499,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4700,
+    "queue_serve_n": 1963,
+    "queue_serve_share": 0.4176595744680851,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k5_f5_cons/decisions.jsonl",
+    "total_rebuffer_s_run": 1.6356712877765585,
+    "window_W": 5
+  },
+  "v_hybrid_k5_f5_safe": {
+    "A_direct": {
+      "llm_served_mean_s": 0.0026111581422118696,
+      "llm_served_n": 2659,
+      "queue_serve_mean_s": 0.0,
+      "queue_serve_n": 1926
+    },
+    "B_lagged": {
+      "n": 3391,
+      "post_queue_offsets_1..W_mean_s": 0.0005888572120997429,
+      "run_mean_s": 0.001514300872440864
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1926,
+      "rate": 0.0005192107995846313,
+      "vs_mpc_ref_ratio": 0.08982346832814123,
+      "window_union_decisions": 3602,
+      "window_union_rebuffer_s": 1.996814806230228,
+      "window_union_share_of_run_rebuffer": 0.2875982742488135,
+      "windows_with_rebuffer_event": 1
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.035584566143245566,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "5-10s",
+        "queue_serve_n": 94,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "10-20s",
+        "queue_serve_n": 341,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.000896236448038702,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0006706908115358819,
+        "band": ">=20s",
+        "queue_serve_n": 1491,
+        "window_union_rebuffer_s": 1.996814806230228
+      }
+    ],
+    "decisions": 4585,
+    "queue_serve_n": 1926,
+    "queue_serve_share": 0.4200654307524537,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k5_f5_safe/decisions.jsonl",
+    "total_rebuffer_s_run": 6.943069500141362,
+    "window_W": 5
+  },
+  "v_hybrid_k5_f8_cons": {
+    "A_direct": {
+      "llm_served_mean_s": 0.00799722698613368,
+      "llm_served_n": 2800,
+      "queue_serve_mean_s": 0.0,
+      "queue_serve_n": 1900
+    },
+    "B_lagged": {
+      "n": 3319,
+      "post_queue_offsets_1..W_mean_s": 0.005389733173209419,
+      "run_mean_s": 0.004764305438547724
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1900,
+      "rate": 0.002105263157894737,
+      "vs_mpc_ref_ratio": 0.3642105263157895,
+      "window_union_decisions": 3523,
+      "window_union_rebuffer_s": 17.888524401882062,
+      "window_union_share_of_run_rebuffer": 0.7988717496746424,
+      "windows_with_rebuffer_event": 4
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.12805098095107767,
+        "A_queue_direct_mean_s": null,
+        "C_window_incidence": null,
+        "band": "<5s",
+        "queue_serve_n": 0,
+        "window_union_rebuffer_s": 10.84221093459638
+      },
+      {
+        "A_llm_direct_mean_s": 0.020646329602428383,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "5-10s",
+        "queue_serve_n": 57,
+        "window_union_rebuffer_s": 3.439140327570798
+      },
+      {
+        "A_llm_direct_mean_s": 0.012568547525138966,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "10-20s",
+        "queue_serve_n": 359,
+        "window_union_rebuffer_s": 3.607173139714883
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0026954177897574125,
+        "band": ">=20s",
+        "queue_serve_n": 1484,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4700,
+    "queue_serve_n": 1900,
+    "queue_serve_share": 0.40425531914893614,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k5_f8_cons/decisions.jsonl",
+    "total_rebuffer_s_run": 22.392235561174303,
+    "window_W": 5
+  },
+  "v_hybrid_k5_f8_safe": {
+    "A_direct": {
+      "llm_served_mean_s": 0.0025420239117275516,
+      "llm_served_n": 2565,
+      "queue_serve_mean_s": 0.0009294054544543862,
+      "queue_serve_n": 1874
+    },
+    "B_lagged": {
+      "n": 3313,
+      "post_queue_offsets_1..W_mean_s": 0.00030207012855015765,
+      "run_mean_s": 0.0018612293658996823
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1874,
+      "rate": 0.0016008537886872999,
+      "vs_mpc_ref_ratio": 0.27694770544290287,
+      "window_union_decisions": 3523,
+      "window_union_rebuffer_s": 2.742464157534192,
+      "window_union_share_of_run_rebuffer": 0.33193719460416365,
+      "windows_with_rebuffer_event": 3
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.07494587739748472,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "5-10s",
+        "queue_serve_n": 16,
+        "window_union_rebuffer_s": 1.0007583358866723
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "10-20s",
+        "queue_serve_n": 363,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0011650206164866353,
+        "C_window_incidence": 0.002006688963210702,
+        "band": ">=20s",
+        "queue_serve_n": 1495,
+        "window_union_rebuffer_s": 1.7417058216475199
+      }
+    ],
+    "decisions": 4439,
+    "queue_serve_n": 1874,
+    "queue_serve_share": 0.4221671547645866,
+    "source": "results/soyun/serve_gate_20260909/v_hybrid_k5_f8_safe/decisions.jsonl",
+    "total_rebuffer_s_run": 8.26199715522869,
+    "window_W": 5
+  },
+  "v_repeat_k3_f5_cons": {
+    "A_direct": {
+      "llm_served_mean_s": 0.006526005003494058,
+      "llm_served_n": 2927,
+      "queue_serve_mean_s": 0.0008093942546145311,
+      "queue_serve_n": 1773
+    },
+    "B_lagged": {
+      "n": 3098,
+      "post_queue_offsets_1..W_mean_s": 0.0017615107645883204,
+      "run_mean_s": 0.004369504820991206
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1773,
+      "rate": 0.0028200789622109417,
+      "vs_mpc_ref_ratio": 0.4878736604624929,
+      "window_union_decisions": 3393,
+      "window_union_rebuffer_s": 5.457160348694616,
+      "window_union_share_of_run_rebuffer": 0.26572758106429517,
+      "windows_with_rebuffer_event": 5
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.15209732637649384,
+        "A_queue_direct_mean_s": null,
+        "C_window_incidence": null,
+        "band": "<5s",
+        "queue_serve_n": 0,
+        "window_union_rebuffer_s": 4.022104335263053
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.008200320076751793,
+        "C_window_incidence": 0.017142857142857144,
+        "band": "5-10s",
+        "queue_serve_n": 175,
+        "window_union_rebuffer_s": 1.4350560134315637
+      },
+      {
+        "A_llm_direct_mean_s": 0.005105650039155478,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0037174721189591076,
+        "band": "10-20s",
+        "queue_serve_n": 269,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0007524454477050414,
+        "band": ">=20s",
+        "queue_serve_n": 1329,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4700,
+    "queue_serve_n": 1773,
+    "queue_serve_share": 0.3772340425531915,
+    "source": "results/soyun/serve_gate_20260909/v_repeat_k3_f5_cons/decisions.jsonl",
+    "total_rebuffer_s_run": 20.53667265865867,
+    "window_W": 3
+  },
+  "v_repeat_k3_f5_safe": {
+    "A_direct": {
+      "llm_served_mean_s": 0.0024955875887766516,
+      "llm_served_n": 2843,
+      "queue_serve_mean_s": 0.0,
+      "queue_serve_n": 1741
+    },
+    "B_lagged": {
+      "n": 3025,
+      "post_queue_offsets_1..W_mean_s": 0.0001944830045377227,
+      "run_mean_s": 0.0015477651646797603
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1741,
+      "rate": 0.0005743825387708214,
+      "vs_mpc_ref_ratio": 0.09936817920735211,
+      "window_union_decisions": 3296,
+      "window_union_rebuffer_s": 0.5883110887266112,
+      "window_union_share_of_run_rebuffer": 0.08291963036156749,
+      "windows_with_rebuffer_event": 1
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.03784243575820229,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.011494252873563218,
+        "band": "5-10s",
+        "queue_serve_n": 87,
+        "window_union_rebuffer_s": 0.5883110887266112
+      },
+      {
+        "A_llm_direct_mean_s": 0.0034718367345996414,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "10-20s",
+        "queue_serve_n": 290,
+        "window_union_rebuffer_s": 0.0
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": ">=20s",
+        "queue_serve_n": 1364,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4584,
+    "queue_serve_n": 1741,
+    "queue_serve_share": 0.3797993019197208,
+    "source": "results/soyun/serve_gate_20260909/v_repeat_k3_f5_safe/decisions.jsonl",
+    "total_rebuffer_s_run": 7.094955514892021,
+    "window_W": 3
+  },
+  "v_repeat_k5_f5_cons": {
+    "A_direct": {
+      "llm_served_mean_s": 0.0135276353777547,
+      "llm_served_n": 2740,
+      "queue_serve_mean_s": 0.0,
+      "queue_serve_n": 1960
+    },
+    "B_lagged": {
+      "n": 3488,
+      "post_queue_offsets_1..W_mean_s": 0.004781128748300338,
+      "run_mean_s": 0.007886323603201677
+    },
+    "C_incidence": {
+      "queue_serve_windows": 1960,
+      "rate": 0.0020408163265306124,
+      "vs_mpc_ref_ratio": 0.353061224489796,
+      "window_union_decisions": 3705,
+      "window_union_rebuffer_s": 16.67657707407158,
+      "window_union_share_of_run_rebuffer": 0.44991913426680097,
+      "windows_with_rebuffer_event": 4
+    },
+    "by_buffer_band": [
+      {
+        "A_llm_direct_mean_s": 0.227807073239381,
+        "A_queue_direct_mean_s": null,
+        "C_window_incidence": null,
+        "band": "<5s",
+        "queue_serve_n": 0,
+        "window_union_rebuffer_s": 7.623979992831426
+      },
+      {
+        "A_llm_direct_mean_s": 0.008822966507177179,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0,
+        "band": "5-10s",
+        "queue_serve_n": 187,
+        "window_union_rebuffer_s": 0.48526315789474483
+      },
+      {
+        "A_llm_direct_mean_s": 0.028277618469114155,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0029585798816568047,
+        "band": "10-20s",
+        "queue_serve_n": 338,
+        "window_union_rebuffer_s": 8.567333923345409
+      },
+      {
+        "A_llm_direct_mean_s": 0.0,
+        "A_queue_direct_mean_s": 0.0,
+        "C_window_incidence": 0.0020905923344947735,
+        "band": ">=20s",
+        "queue_serve_n": 1435,
+        "window_union_rebuffer_s": 0.0
+      }
+    ],
+    "decisions": 4700,
+    "queue_serve_n": 1960,
+    "queue_serve_share": 0.41702127659574467,
+    "source": "results/soyun/serve_gate_20260909/v_repeat_k5_f5_cons/decisions.jsonl",
+    "total_rebuffer_s_run": 37.06572093504788,
+    "window_W": 5
   }
 }

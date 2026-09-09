@@ -1,0 +1,7 @@
+dimension,band,n_decisions,n_verify,n_llm_actions,mpc_step1_rate,repeat_last_rate_on_verify,llm_autocorr_adjacent_rate
+buffer,5-10s,241,136,154,0.941176,0.941176,0.750000
+buffer,10-20s,655,259,365,0.895753,0.895753,0.846890
+buffer,>=20s,3688,1575,2324,0.876190,0.876190,0.868161
+throughput_cv,stable cv<0.10,3320,1343,1688,0.891288,0.891288,0.863881
+throughput_cv,moderate 0.10-0.30,992,476,888,0.886555,0.886555,0.890767
+throughput_cv,volatile cv>=0.30,272,151,267,0.801325,0.801325,0.777328
