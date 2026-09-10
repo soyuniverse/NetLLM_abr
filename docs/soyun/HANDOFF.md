@@ -9,7 +9,14 @@ the context.** Everything referenced here is committed.
 [[SUBMISSION_SUMMARY]]):
 1. **Deploy `--speculative-drafter repeat-last --speculative-draft-steps 3`, no serve gate** — ~1.5× fewer LLM calls (q ≈ 38 %, 4-seed σ < 0.3 pp), QoE/rebuffering cost not distinguishable from zero at 4 seeds. `hybrid` k3 is equivalent.
 2. **M6** (drafter + `--temporal-selector event-aware --token-selector intra-timestep`) gets ~2.0× but costs −3.0 ± 1.9 % QoE — take it only if 2× matters more than 3 % QoE.
-3. **Methodology finding:** `test.py` seeds the eval RNG once per 100-trace run, so rebuffering/QoE are a per-seed lottery (report as mean±std, ≥3 seeds); structural metrics (speedup, q) are unaffected. [[RNG_CONTAMINATION_AUDIT]], [[TEAM_ALERT_RNG_CONTAMINATION]].
+3. **Methodology finding:** `test.py` seeds the eval RNG once per 100-trace run, so rebuffering/QoE are a per-seed lottery (report as mean±std, ≥3 seeds); structural metrics (speedup, q) are unaffected. [[RNG_CONTAMINATION_AUDIT]], [[TEAM_ALERT_RNG_CONTAMINATION]]. Fix packaged: [[TEST_HARNESS_HANDOFF]] + `docs/soyun/patches/test_py_per_episode_reseed.patch`.
+
+**Handoff package (2026-09-10), git tag `soyun-handoff-20260910`:**
+[[SUBMISSION_SUMMARY]] (drafter config), [[TEST_HARNESS_HANDOFF]] (the `test.py`
+RNG fix — patch or opt-in probe), `docs/soyun/patches/test_py_per_episode_reseed.patch`.
+An offline zip of these + `reseed_per_episode.py` + the 4-seed figures is built by
+`session` scratch (not committed); its file list is in the session's completion
+report.
 
 **The drafter ablation is DONE (2026-09-08 run, 2026-09-10 4-seed confirmation).**
 `repeat-last` / `hybrid` drafters clear speedup 1.0× and 1.24× — the lines the

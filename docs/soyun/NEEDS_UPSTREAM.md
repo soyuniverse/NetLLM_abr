@@ -202,6 +202,11 @@ Format per entry:
   result (the determinism battery, [[DRAFTER_ABLATION]] §1, already passes) — it
   only removes cross-trace contamination when two configs are compared.
 - **Owner to contact:** `test.py` / eval-harness owner.
+- **Ready-made patch:** `docs/soyun/patches/test_py_per_episode_reseed.patch`
+  (`git apply` it; validated `git apply --check` + `patch -p1 --dry-run` +
+  post-patch `ast.parse` against HEAD `08d56f5`). Opt-in equivalent that touches
+  no team file: `abr_spec/reseed_per_episode.py` (`--probe reseed_per_episode`).
+  Applying / choosing between them: [[TEST_HARNESS_HANDOFF]].
 - **Status:** open, medium priority. Blocks a clean read of any serve-time /
   mid-run intervention A/B (serve gate, and any future draft-time gate). Not
-  soyun's to fix.
+  soyun's to fix — patch is provided for the owner to review.
