@@ -43,9 +43,11 @@
 #       adaptive_bitrate_streaming/tests/test_mpc_draft.py \
 #       adaptive_bitrate_streaming/tests/test_speculative_acceptance.py \
 #       abr_spec/tests/test_drafters.py
-#   (these 40 unit tests don't touch test.py's loop, so they pass unchanged;
-#    the end-to-end determinism check in abr_spec/run_determinism_check.sh is the
-#    one whose reference values must be regenerated.)
+#   The 40 unit tests don't touch test.py's loop -> pass unchanged.
+#   abr_spec/run_determinism_check.sh still passes (it checks a==b at a fixed
+#   seed, which the patch preserves). What is no longer reproducible bit-for-bit
+#   is the set of committed campaign results (results/soyun/drafter_ab_20260908/,
+#   drafter_seed_sweep_20260910/, ...) -- re-run any A/B compared against them.
 #
 # VALIDATED 2026-09-10 against HEAD 32e86ca:
 #   git apply --check -p1  -> OK
