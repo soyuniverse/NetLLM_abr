@@ -1,0 +1,86 @@
+# test_py_per_episode_reseed.patch
+# =================================
+# soyun / speculative inference -- branch soyun/spec-abr -- 2026-09-10
+# Ref: docs/soyun/NEEDS_UPSTREAM.md #6, docs/soyun/RNG_CONTAMINATION_AUDIT.md,
+#      docs/soyun/TEST_HARNESS_HANDOFF.md
+#
+# WHAT THIS FIXES
+#   adaptive_bitrate_streaming/plm_special/test.py seeds the evaluation RNG
+#   ONCE, immediately before the 100-trace `while True` loop. `model.clear_dq()`
+#   at each episode boundary resets the DT deques and the drafter but NOT
+#   `random` / `numpy` / `torch`. So the stochastic action sampler
+#   (`rl_policy._sample -> random.choices`, active under
+#   `--speculative-verification-mode sample`, the default) draws from a single
+#   RNG stream shared across all 100 traces.
+#
+# WHY IT MATTERS (1-2 sentences)
+#   Any intervention that changes how many RNG draws trace N consumes (a fallback
+#   vs a queue serve, a forced re-draft, a different drafter) shifts the stream
+#   for every later trace, so an A/B that differs on 3 decisions in trace 52 also
+#   silently perturbs traces 54-99. Measured: 3 serve-gate trips produced a 27 %
+#   sustained downstream action-mismatch across 45/100 traces purely through this
+#   shift, and outlier-dominated metrics (total rebuffering, QoE) became a
+#   per-seed lottery -- even the plain no-speculation baseline rebuffers
+#   6.4 / 15.2 / 12.7 / 33.3 s across seeds 1-4.
+#
+# WHAT THE PATCH DOES
+#   Re-seeds `args.seed + ep_count` right after `model.clear_dq()` /
+#   `ep_count += 1` in the episode-boundary block, so every trace starts from a
+#   fixed, independent seed. Each single run stays a deterministic function of
+#   `--seed`; cross-trace contamination between two compared runs is removed.
+#   This is the in-tree equivalent of the opt-in overlay
+#   abr_spec/reseed_per_episode.py (same `base + episode_index` scheme).
+#
+# APPLY
+#   git apply docs/soyun/patches/test_py_per_episode_reseed.patch
+#   # or:  patch -p1 < docs/soyun/patches/test_py_per_episode_reseed.patch
+#
+# AFTER APPLYING
+#   Re-run the determinism battery and re-baseline it -- exact per-run numbers
+#   will change (a different seed sequence), but every run must still be
+#   bit-reproducible run-to-run at a fixed --seed:
+#     CUDA_VISIBLE_DEVICES="" .venv/bin/python -m pytest -q \
+#       adaptive_bitrate_streaming/tests/test_mpc_draft.py \
+#       adaptive_bitrate_streaming/tests/test_speculative_acceptance.py \
+#       abr_spec/tests/test_drafters.py
+#   (these 40 unit tests don't touch test.py's loop, so they pass unchanged;
+#    the end-to-end determinism check in abr_spec/run_determinism_check.sh is the
+#    one whose reference values must be regenerated.)
+#
+# VALIDATED 2026-09-10 against HEAD 32e86ca:
+#   git apply --check -p1  -> OK
+#   patch -p1 --dry-run    -> OK
+#   post-patch test.py     -> ast.parse OK
+#
+# ---------------------------------------------------------------------------
+diff --git a/adaptive_bitrate_streaming/plm_special/test.py b/adaptive_bitrate_streaming/plm_special/test.py
+index d209ece..7f4fae2 100644
+--- a/adaptive_bitrate_streaming/plm_special/test.py
++++ b/adaptive_bitrate_streaming/plm_special/test.py
+@@ -39,6 +39,11 @@ def test_on_env(args, model, results_dir, env_settings, target_return, max_ep_nu
+         trace_idx = env.trace_idx
+         results_log[trace_idx] = []
+ 
++        # Seed the first episode. Every later episode is re-seeded at its
++        # boundary (see after ``model.clear_dq()`` below) so that each trace's
++        # stochastic sampling is independent of how many RNG draws the earlier
++        # traces consumed -- otherwise any mid-run intervention that changes the
++        # draw count contaminates every downstream trace (NEEDS_UPSTREAM #6).
+         set_random_seed(args.seed)
+ 
+         while True:
+@@ -89,6 +94,14 @@ def test_on_env(args, model, results_dir, env_settings, target_return, max_ep_nu
+                 model.clear_dq()
+ 
+                 ep_count += 1
++                # Re-seed at the episode boundary: trace ``ep_count`` starts from
++                # ``args.seed + ep_count``, independent of the earlier traces'
++                # RNG consumption. This removes cross-trace contamination when
++                # two runs are compared and leaves any single run's behaviour a
++                # deterministic function of ``args.seed`` (NEEDS_UPSTREAM #6;
++                # matches abr_spec/reseed_per_episode.py). Re-baseline the
++                # 40/40 determinism battery in the same change.
++                set_random_seed(args.seed + ep_count)
+                 if ep_count >= max_ep_num:
+                     break
+ 
