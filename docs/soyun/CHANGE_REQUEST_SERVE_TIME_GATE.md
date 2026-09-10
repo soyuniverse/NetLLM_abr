@@ -1,9 +1,43 @@
-# CHANGE_REQUEST — serve-time buffer gate: investigated, **not recommended**
+# CHANGE_REQUEST — serve-time buffer gate: **WITHDRAWN**
 
 **From:** soyun (speculative inference) · **Branch:** `soyun/spec-abr` · **Date:** 2026-09-09
 **To:** `run_plm.py` / speculative-CLI owner (`suy2136`), `rl_policy.py` owner
-**Status:** DRAFT — **recommendation: do not promote** (§7); take NEEDS_UPSTREAM #6 instead
-**Prerequisite reading:** [[DRAFTER_ABLATION]] §S.7, §8, §9 · [[SERVE_GATE_DIAGNOSIS]]
+**Status:** **WITHDRAWN 2026-09-10** — no team-file change requested. See withdrawal note below.
+**Prerequisite reading:** [[DRAFTER_ABLATION]] §S.7, §8, §9 · [[SERVE_GATE_DIAGNOSIS]] · [[TRAJECTORY_DIVERGENCE]] · [[RNG_CONTAMINATION_AUDIT]]
+
+---
+
+## Withdrawal note (2026-09-10)
+
+**This change request is withdrawn. No change to `run_plm.py` / `rl_policy.py` /
+`acceptance.py` is requested.**
+
+Reason: the serve-time buffer gate has **no effect** once measured without the
+`test.py` seed-once RNG confound. The one configuration that passed all four
+criteria — `hybrid k5 + conservative + floor 5 s`, total rebuffering 18.5 → 1.6 s
+at seed 1 — was a **contamination artefact**:
+
+- Seeds {2, 3, 4}: the gate helps 1 / is byte-identical no-op 2 / hurts 1
+  (+4.3 s) ([[DRAFTER_ABLATION]] §9.9).
+- Re-measured with per-episode re-seeding (`abr_spec/reseed_per_episode.py`): the
+  gate fires **one trip**, changes **one decision**, and moves total rebuffering
+  by **0.0 s** ([[DRAFTER_ABLATION]] §9.11, [[TRAJECTORY_DIVERGENCE]] §6). The
+  seed-1 "win" was a coincidental alignment between where the gate trips and
+  where that particular RNG stream's pathological cascade happened to land.
+
+The two things worth doing instead (§7): **[[NEEDS_UPSTREAM]] #6** (re-seed the
+eval RNG per episode — an eval-harness fix, not this) and a **draft-time**
+drain-aware enqueue rule (a separate change request, to be scoped once the
+draft-time prototype is measured).
+
+`abr_spec/serve_gate.py` and its wrapper flags stay in the tree as a research
+knob (like `--speculative-drafter`) — the mechanism was worth building to *prove*
+the negative and to power [[TRAJECTORY_DIVERGENCE]] — but they are **not proposed
+for promotion**.
+
+Everything below is **preserved as the investigation record** (what a first-class
+flag would have cost, the impact analysis, the diagnosis). It is no longer an
+"ask".
 
 ---
 
