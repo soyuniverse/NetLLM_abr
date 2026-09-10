@@ -1,16 +1,19 @@
 # HANDOFF — read this file first
 
-**soyun / speculative inference · branch `soyun/spec-abr` · last updated 2026-09-09**
+**soyun / speculative inference · branch `soyun/spec-abr` · last updated 2026-09-10**
 
 If you are a new instance or a resumed session: **this file alone should restore
 the context.** Everything referenced here is committed.
 
-**2026-09-08: the drafter ablation is DONE.** `repeat-last` / `hybrid` drafters
-clear speedup 1.0× and 1.24× (the lines the parameter sweep could not reach) —
-repeat-last k3 = **1.419×** at q 37.8 %, draft/LLM 1-step agreement **88 %** (mpc
-13 %). Verdict is **conditional**: rebuffering rises 2.9–5.8× A1. Full writeup
-[[DRAFTER_ABLATION]], cost-model update [[SWEEP_SPEC]] §12. Freeze commit
-`0d137ce`, results `results/soyun/drafter_ab_20260908/`.
+**The drafter ablation is DONE (2026-09-08 run, 2026-09-10 4-seed confirmation).**
+`repeat-last` / `hybrid` drafters clear speedup 1.0× and 1.24× — the lines the
+parameter sweep could not reach. 4-seed: repeat-last k3 = **1.49 ± 0.08×** at
+q **38.2 ± 0.3 %**, draft/LLM 1-step agreement **88.5 ± 0.6 %** (mpc ~1.0× / 16 %).
+**No QoE or rebuffering cost distinguishable from zero at k=3** (§9.13 — the
+earlier "conditional / rebuffering 2.9–5.8× A1" was a seed-1 artifact); **k=5 is
+worse**; **M6 (drafter + selectors) = 2.03 ± 0.10× but a real −3.0 ± 1.9 % QoE
+cost**. Full writeup [[DRAFTER_ABLATION]] §9.13, cost model [[SWEEP_SPEC]] §12.
+Freeze `0d137ce`, results `drafter_ab_20260908/` + `drafter_seed_sweep_20260910/`.
 
 **2026-09-09: serve-time safety gate investigated (§8–§9, `serve_gate_20260909/`,
 22 runs, freeze `83704a6`).** Task 0 found all three §S.7 prescriptions are
@@ -23,15 +26,27 @@ re-seeding the gate changes **1 decision** and moves rebuffering by **0** (§9.1
 — the seed-1 win was a coincidental alignment between where the gate trips and
 where that RNG stream's pathological cascade landed.
 
-**The real finding — [[TRAJECTORY_DIVERGENCE]] (the session's best result).**
+**The real finding — [[TRAJECTORY_DIVERGENCE]] / [[RNG_CONTAMINATION_AUDIT]].**
 `test.py` seeds the eval RNG once for all 100 traces, so (a) any mid-run
 intervention contaminates every later trace (3 gate trips → 27 % sustained
-downstream action-mismatch, 45/100 traces) and (b) the un-gated baseline itself
-is a seed lottery (hybrid k5 rebuffering 0.49 / 4.24 / 18.5 / 25.6 s across
-seeds). **The drafter ablation's "conditional success" is a seed-1 statement.**
-Next: [[NEEDS_UPSTREAM]] #6 (re-seed per episode) and the draft-time fix
-([[CHANGE_REQUEST_SERVE_TIME_GATE]] §7). [[NEEDS_UPSTREAM]] #5 (k cap) low
-priority.
+downstream action-mismatch, 45/100 traces) and (b) outlier-dominated metrics
+(rebuffering, QoE) are a per-run seed lottery — even plain A1 rebuffers
+6.4 / 15.2 / 12.7 / 33.3 s across seeds 1–4.
+
+**2026-09-10: G1 seed sweep done (§9.13, `drafter_seed_sweep_20260910/`, 15 runs).**
+The drafter ablation is now 4-seed mean±std. **Headline confirmed** (repeat-last
+k3 speedup 1.49±0.08×, q 38.2±0.3 %, 1-step 88.5±0.6 % — σ tiny, RNG-independent).
+**"Conditional success" retired:** the k=3 cost is not distinguishable from 0 at
+4 seeds (ΔQoE +0.4±2.1 %, Δrebuffering +5±23 s vs same-seed A1). **k=5 is
+strictly worse.** **Only M6 (drafter + Temporal/Token selectors) has a real
+cost:** 2.03±0.10× speedup but ΔQoE −3.0±1.9 %. Deployment pick: repeat-last or
+hybrid **k=3** for a QoE-neutral ~1.5×; M6 if 2× is worth ~3 % QoE.
+
+Team-facing writeup of the RNG defect: [[TEAM_ALERT_RNG_CONTAMINATION]].
+[[CHANGE_REQUEST_SERVE_TIME_GATE]] is **withdrawn**.
+Still open: [[NEEDS_UPSTREAM]] #6 (1-line `test.py` reseed — eval-harness owner),
+draft-time fix only if a larger seed sample later shows a real cost.
+[[NEEDS_UPSTREAM]] #5 (k cap) low priority.
 
 ---
 
@@ -157,28 +172,34 @@ inert under proper measurement — not recommended** ([[CHANGE_REQUEST_SERVE_TIM
 ### Action 5 — remaining, in priority order (GPU costs in [[PAPER_ASSETS_ABR]] §5)
 
 1. **[[NEEDS_UPSTREAM]] #6 — re-seed the eval RNG per episode** (`test.py`, ~1 line,
-   not soyun's). Blocks a clean read of any serve-/draft-time A/B. The opt-in
-   diagnostic `abr_spec/reseed_per_episode.py` exists for local use meanwhile.
-2. **drafter ablation across seeds.** m2/m3/m4/m5/M6 at seed 2–4 → report
-   rebuffering/QoE as mean±std, not the seed-1 point (§9.10). ~75 min GPU.
-3. **Draft-time drain-aware enqueue (the general fix).** Skip a queue entry whose
-   `rollout.predicted_buffers` dips below a floor. `mpc_draft.py` + `rl_policy.py`
-   → a second change request. Protects every drafter.
+   not soyun's; re-baseline the determinism battery in the same commit). Blocks a
+   clean read of any serve-/draft-time A/B. `abr_spec/reseed_per_episode.py` is
+   the opt-in stand-in.
+2. ~~drafter ablation across seeds~~ **DONE 2026-09-10 (§9.13, G1).**
+3. **Draft-time drain-aware enqueue** — now LOW: the 4-seed drafter cost is not
+   distinguishable from 0, so there is no rebuffering problem to fix at k=3.
+   Revisit only if [[PAPER_ASSETS_ABR]] G8 (n=8–10) surfaces a real cost.
 4. **[[NEEDS_UPSTREAM]] #4** — `recent-timestep` fp16 NaN, not soyun's.
-- **[[NEEDS_UPSTREAM]] #5** (k=8 cap) — LOW: speedup decreases k3→k5.
+- **[[NEEDS_UPSTREAM]] #5** (k=8 cap) — LOW: speedup decreases k3→k5, k5 already worse.
 
-### Scratchpad → committed file map (session 2026-09-08/09)
+### Scratchpad → committed file map (sessions 2026-09-08 … 09-10)
 
-The session scratchpad (`/tmp/claude-0/.../scratchpad/`, 604 KB, **not deleted**)
+The session scratchpad (`/tmp/claude-0/.../scratchpad/`, ~0.6 MB, **not deleted**)
 holds one-off drivers and logs that are superseded by committed files:
 
 | scratchpad | superseded by (committed) |
 |---|---|
 | `run_ablation.sh`, `run_determinism.sh` | `abr_spec/run_drafter_ablation.sh`, `abr_spec/run_determinism_check.sh` |
 | `run_batch3.sh`, `run_seeds.sh`, `run_v1_seeds.sh`, `run_reseed.sh` | phases folded into `abr_spec/run_serve_gate.sh` (batch 3) / documented in DRAFTER_ABLATION §9.9, §9.11 |
+| `run_reseed_a1.sh` | `abr_spec/run_rng_audit.sh` (a1/m1a/m2 reseed A/B, §9.12 / [[RNG_CONTAMINATION_AUDIT]] §3) |
 | `serve_gate_v2.py`, `serve_gate_v2_notes.md`, `fig5_snippet.py`, `gate_proto_test.py`, `patchtest*.py` | `abr_spec/serve_gate.py` (v2), `abr_spec/make_figures.py` (fig5/6) |
 | `*.log` (ablation/determinism/serve_gate/seeds/reseed) | `results/soyun/*/logs/*.log` (gitignored) + the committed `manifest.json` / `summary.json` |
 | `synth.jsonl`, `qs_test/` | throwaway test fixtures for `queue_safety.py` |
+| `session5_plan.md` | working note for the 09-10 session (G1 sweep + doc updates); no committed equivalent needed |
+
+New committed tooling this session (09-09/09-10): `abr_spec/reseed_per_episode.py`,
+`abr_spec/trajectory_divergence.py`, `abr_spec/run_rng_audit.sh`,
+`abr_spec/run_drafter_seed_sweep.sh`, `abr_spec/build_seed_sweep_report.py`.
 
 ### Not planned unless asked
 
