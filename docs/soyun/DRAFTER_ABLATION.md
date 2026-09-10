@@ -459,18 +459,23 @@ python abr_spec/make_figures.py --out-dir results/soyun/figures
 `decision_trace.py`(모든 drafter 계측) + `breakeven.py`(빈 verify 가드), 둘 다
 40-test + tolerance-0 회귀 통과, m1a==s0 end-to-end 확인.
 
-## 7. 논문 그림 4종 (Task 4)
+## 7. 논문 그림 (Task 4)
 
 `python abr_spec/make_figures.py --out-dir results/soyun/figures` →
 각 300 dpi PNG + vector PDF, 흑백 대응(hatch), 영문 캡션(`<name>.caption.txt`).
 바이너리는 gitignore, `results/soyun/figures/README.md` 가 tracked 기록.
+**fig1/fig4 는 2026-09-10 에 4-seed 기준으로 재생성** (§9.13); 구 seed-1 판본은
+`figures/archive/*_seed1.*` 에 보존 (코드 = `make_figures.py` 의
+`fig1_seed1_archived` / `fig4_seed1_archived`).
 
 | 그림 | 내용 | 핵심 메시지 |
 |---|---|---|
-| fig1 | 6조건 × [QoE, speedup] 이중축, A1 선 + determinism 오차선, 1.0×·1.24× 선 | mpc <1.0, zero-search 4종 모두 1.24× 돌파, QoE −1.5~4 % |
+| fig1 | 7조건 × [ΔQoE vs 같은-seed A1, speedup] 이중축 (4-seed mean±std, 오차선), A1 seed 밴드, 1.0×·1.24× 선, M6 강조 | zero-search/hybrid 4종 모두 1.24× 돌파, **k=3 ΔQoE 는 A1 seed 노이즈 안**, M6 만 −3.0 ± 1.9 % |
 | fig2 | q vs speedup — 단가 모형 곡선(구·신 인스턴스) + 파라미터 11점 + drafter 실측점 + 본전/1.24× q 선 | 파라미터는 q<10 %·speedup<1.0 에서 멈춤, drafter 는 q 38–42 % 로 곡선을 타고 넘음 |
 | fig3 | buffer tolerance 완화 시 buffer/state fallback stacked bar | 총 fallback 불변, 구성만 이동 → gate 가 아니라 draft 가 병목 |
-| fig4 | drafter 3종 × [일치율, q, speedup, ΔQoE, Δrebuffer] + 버퍼 구간별 일치율 | repeat-last 는 어디서나 ~88 %, hybrid 는 `<5s` 에서 mpc 수준(43 %)으로 라우팅 |
+| fig4 | drafter 5종 Δrebuffering vs 같은-seed A1 (4-seed mean±std) + A1 seed 밴드 (좌) · 버퍼 구간별 draft 1-step 일치율 (우, 기전) | **k=3 계열은 A1 밴드 안, k=5 는 악화, M6 만 +38 ± 29 s 로 밴드 밖**; repeat-last 는 어디서나 ~88 %, hybrid 는 `<5s` 에서 mpc(43 %)로 라우팅 |
+| fig5 | serve-gate floor × mode × rebuffering / speedup (seed 1) | 게이트는 무효 — [[CHANGE_REQUEST_SERVE_TIME_GATE]] 철회 |
+| fig6 | serve-gate trip 의 하류 궤적 오염 (v1 vs v2) + trace별 rebuffering | RNG 한 번 시딩 → 개입이 하류 trace 를 민다 ([[RNG_CONTAMINATION_AUDIT]]) |
 
 수치는 전부 tracked 결과 파일에서 읽으며 없는 값은 "n/a" (추정 없음).
 
