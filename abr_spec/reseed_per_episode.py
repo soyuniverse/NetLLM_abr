@@ -3,7 +3,49 @@
 
 soyun / speculative inference.
 
-[[TRAJECTORY_DIVERGENCE]] / [[NEEDS_UPSTREAM]] #6: ``plm_special/test.py:42`` calls
+
+QUICK START (copy-paste, fill in the two <...> paths)
+----------------------------------------------------
+Run your evaluation with the diagnostic overlay installed -- nothing else
+changes, and the wrapper touches no team file::
+
+    cd /path/to/NetLLM_abr
+    .venv/bin/python abr_spec/run_wrapped.py \\
+      --run-id reseed_check --phase myrun --ckpt-name <your_ckpt_dir_name> \\
+      --probe reseed_per_episode \\
+      -- --test --fp16 --seed 1 --plm-type llama --plm-size base --rank 128 \\
+         --plm-dir ../downloaded_plms/llama/base \\
+         --model-dir ../downloaded_plms/ft_plms/<your_lora_dir> \\
+         --trace fcc-test --trace-num 100 --video video1 --fixed-order \\
+         --device cuda:0 --device-out cuda:0 \\
+         --temporal-selector none --token-selector none \\
+         --speculative-draft-steps 3 --speculative-verification-mode sample
+
+``<your_ckpt_dir_name>`` is a directory under ``results/soyun/checkpoints/``;
+``<your_lora_dir>`` is your fine-tuned adapter under
+``downloaded_plms/ft_plms/``.  A confirmation line is printed at install time and
+``results/soyun/reseed_check/myrun/reseed_per_episode.json`` records
+``{"reseeds": 100}`` when it worked.  Run your baseline the same way (with and
+without the intervention you are testing) and compare per trace.
+
+
+THIS TOOL vs. THE test.py PATCH
+------------------------------
+* This tool (option B): a monkeypatch installed for one run via ``--probe``.
+  No team file changes, nothing to merge -- use it to *check* whether RNG
+  contamination is affecting a specific A/B, right now.
+* ``docs/soyun/patches/test_py_per_episode_reseed.patch`` (option A): the same
+  fix applied to ``test.py`` itself, so every future run in this checkout is
+  clean by default.  Apply it if you will keep experimenting in this environment.
+
+Both use the identical ``base_seed + episode_index`` scheme, so a run under this
+probe and a run after the patch produce the same per-trace seeding.
+Full comparison + guidance: ``docs/soyun/TEST_HARNESS_HANDOFF.md``.
+
+
+HOW IT WORKS
+------------
+[[TRAJECTORY_DIVERGENCE]] / [[NEEDS_UPSTREAM]] #6: ``plm_special/test.py`` calls
 ``set_random_seed(args.seed)`` ONCE, before the 100-trace loop; ``clear_dq()`` at
 each episode boundary does not re-seed.  So the sampling RNG stream is shared
 across all traces, and any mid-run intervention (the serve gate) that changes the
@@ -23,6 +65,11 @@ monkeypatches two call sites so that every trace starts from ``seed + trace_i``:
 seed-once behaviour.  This is a separate, opt-in execution path for A/B
 diagnostics only; a run that uses it is labelled ``reseed_per_episode`` in its
 manifest and is not comparable to a run that does not.
+
+**QoE / rebuffering are still a per-seed lottery under this tool** (each trace is
+now independent, but a single seed still draws one outcome per trace).  Report
+QoE / rebuffering as mean +- std over >= 3 seeds regardless -- see
+``docs/soyun/SUBMISSION_SUMMARY.md``.
 """
 import json
 
