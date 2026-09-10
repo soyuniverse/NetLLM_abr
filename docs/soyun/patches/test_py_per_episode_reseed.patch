@@ -49,7 +49,8 @@
 #   is the set of committed campaign results (results/soyun/drafter_ab_20260908/,
 #   drafter_seed_sweep_20260910/, ...) -- re-run any A/B compared against them.
 #
-# VALIDATED 2026-09-10 against HEAD 32e86ca:
+# VALIDATED 2026-09-10 (test.py last changed by the team at f4be263, so this
+# applies cleanly at any current soyun/spec-abr HEAD):
 #   git apply --check -p1  -> OK
 #   patch -p1 --dry-run    -> OK
 #   post-patch test.py     -> ast.parse OK
