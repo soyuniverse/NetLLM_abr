@@ -138,6 +138,26 @@ def main():
             mu, sd = stats(r[k]); return f"{mu:.{p}f}+-{sd:.{p}f}"
         print(f"{cond:22} {f('qoe',4):>16} {f('dqoe'):>15} {f('reb'):>16} {f('dreb'):>16} {f('spd',3):>15} {f('q',1):>13}")
 
+    # ---- tracked CSV for make_figures.py (fig1/fig4) ----
+    import csv as _csv
+    out = SW / "seed_sweep_table.csv"
+    cols = ["qoe", "dqoe", "reb", "dreb", "spd", "q", "s1"]
+    with open(out, "w", newline="") as fh:
+        w = _csv.writer(fh)
+        w.writerow(["condition", "n"] + [c + m for c in cols for m in ("_mean", "_std")])
+        for cond in COND:
+            r = rows[cond]
+            if not r["qoe"]:
+                continue
+            cells = []
+            for c in cols:
+                if r[c]:
+                    mu, sd = stats(r[c]); cells += [f"{mu:.5f}", f"{sd:.5f}"]
+                else:
+                    cells += ["", ""]
+            w.writerow([cond, len(r["qoe"])] + cells)
+    print(f"\nwrote {out}")
+
 
 if __name__ == "__main__":
     main()

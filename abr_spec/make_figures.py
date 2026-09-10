@@ -25,6 +25,7 @@ REPO = Path(__file__).resolve().parents[1]
 RID = "drafter_ab_20260908"
 AB = REPO / "results" / "soyun" / RID / "analysis"
 SWEEP = REPO / "results" / "soyun" / "sweep_spec_20260902" / "analysis" / "sweep_table.csv"
+SEED_SWEEP = REPO / "results" / "soyun" / "drafter_seed_sweep_20260910" / "seed_sweep_table.csv"
 
 plt.rcParams.update({
     "font.size": 9, "axes.titlesize": 10, "axes.labelsize": 9,
@@ -41,6 +42,13 @@ A1_QOE = 0.94872
 def read_table():
     with open(AB / "drafter_ablation_table.csv") as f:
         return {r["phase"]: r for r in csv.DictReader(f)}
+
+
+def read_seed_sweep():
+    """4-seed mean/std per condition (abr_spec/build_seed_sweep_report.py)."""
+    with open(SEED_SWEEP) as f:
+        return {r["condition"]: {k: fnum(v) for k, v in r.items() if k != "condition"}
+                for r in csv.DictReader(f)}
 
 
 def read_sweep():
@@ -65,51 +73,88 @@ def save(fig, out_dir, name, caption):
 
 # --------------------------------------------------------------------------
 def fig1(t, out_dir):
-    """6 conditions x [QoE, speedup] dual axis."""
-    order = ["a1", "m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3",
-             "m4_repeat_k5", "m5_hybrid_k5"]
-    labels = ["A1\nall-off", "mpc\nk3", "repeat\nk3", "hybrid\nk3",
-              "repeat\nk5", "hybrid\nk5"]
-    qoe = [A1_QOE] + [fnum(t[p]["qoe"]) for p in order[1:]]
-    spd = [1.0] + [fnum(t[p]["speedup_vs_a1"]) for p in order[1:]]
+    """Drafter ablation, 4-seed: dQoE vs A1 (left) and speedup (right), mean +- std."""
+    ss = read_seed_sweep()
+    # x order: A1, mpc k3 (seed-1 point), then the 4-seed conditions
+    conds = ["m2 repeat-last k3", "m3 hybrid k3", "m4 repeat-last k5",
+             "m5 hybrid k5", "m6 repeat-last k3+sel"]
+    labels = ["A1\nall-off", "mpc k3\n(seed 1)", "repeat\nk3", "hybrid\nk3",
+              "repeat\nk5", "hybrid\nk5", "M6\nk3+sel"]
+    is_m6 = [False, False, False, False, False, False, True]
 
-    fig, ax1 = plt.subplots(figsize=(6.4, 3.8))
-    fig.subplots_adjust(top=0.78)
-    x = range(len(order))
-    b1 = ax1.bar([i - 0.2 for i in x], qoe, 0.4, color="0.75",
-                 edgecolor="black", linewidth=0.7, label="QoE (raw mean)")
-    ax1.set_ylabel("QoE (raw mean)")
-    ax1.set_ylim(0.85, 0.97)
-    ax1.axhline(A1_QOE, color="black", ls=":", lw=1)
-    ax1.annotate("A1 QoE 0.949", (0.0, A1_QOE), fontsize=7, va="bottom", ha="left")
+    # mpc k3: not in the 4-seed sweep -> seed-1 point from the ablation table
+    mpc_dqoe = (fnum(t["m1a_mpc_k3_sample"]["qoe"]) - A1_QOE) / A1_QOE * 100
+    mpc_spd = fnum(t["m1a_mpc_k3_sample"]["speedup_vs_a1"])
+
+    dqoe = [0.0, mpc_dqoe] + [ss[c]["dqoe_mean"] for c in conds]
+    dqoe_e = [0.0, 0.0] + [ss[c]["dqoe_std"] for c in conds]
+    spd = [1.0, mpc_spd] + [ss[c]["spd_mean"] for c in conds]
+    spd_e = [0.0, 0.0] + [ss[c]["spd_std"] for c in conds]
+    # A1's own QoE spread across seeds, as % -> the "seed noise floor" band
+    a1_cv = ss["A1 (no spec)"]["qoe_std"] / ss["A1 (no spec)"]["qoe_mean"] * 100
+
+    fig, ax1 = plt.subplots(figsize=(7.2, 4.0))
+    fig.subplots_adjust(top=0.80)
+    x = list(range(len(labels)))
+
+    ax1.axhspan(-a1_cv, a1_cv, color="0.85", zorder=0,
+                label=f"A1 seed spread (+-{a1_cv:.1f} %)")
+    b1 = None
+    for i in x:
+        hatch = "...." if is_m6[i] else ""
+        bar = ax1.bar(i - 0.2, dqoe[i], 0.4, color="0.6", hatch=hatch,
+                      edgecolor="black", linewidth=0.8, zorder=3)
+        b1 = b1 or bar
+    ax1.errorbar([i - 0.2 for i in x], dqoe, yerr=dqoe_e, fmt="none",
+                 ecolor="black", elinewidth=0.9, capsize=2, zorder=4)
+    ax1.axhline(0, color="black", lw=0.8)
+    ax1.set_ylabel(r"$\Delta$QoE vs same-seed A1 (%)")
+    ax1.set_ylim(-7, 4)
 
     ax2 = ax1.twinx()
-    b2 = ax2.bar([i + 0.2 for i in x], spd, 0.4, color="white", hatch="////",
-                 edgecolor="black", linewidth=0.7, label="speedup vs A1")
-    # determinism latency drift +-1.9 % -> speedup error bar
-    ax2.errorbar([i + 0.2 for i in x], spd, yerr=[s * 0.019 for s in spd],
-                 fmt="none", ecolor="black", elinewidth=0.8, capsize=2)
+    b2 = None
+    for i in x:
+        hatch = "xxxx" if is_m6[i] else "////"
+        bar = ax2.bar(i + 0.2, spd[i], 0.4, color="white", hatch=hatch,
+                      edgecolor="black", linewidth=0.8, zorder=3)
+        b2 = b2 or bar
+    ax2.errorbar([i + 0.2 for i in x], spd, yerr=spd_e, fmt="none",
+                 ecolor="black", elinewidth=0.9, capsize=2, zorder=4)
     ax2.set_ylabel("speedup vs A1 (latency ratio)")
-    ax2.set_ylim(0.0, 1.6)
+    ax2.set_ylim(0.0, 2.4)
     ax2.axhline(1.0, color="black", ls="--", lw=1)
     ax2.axhline(1.24, color="0.4", ls="-.", lw=1)
-    ax2.annotate("1.24x", (len(order) - 0.5, 1.24), fontsize=7, va="bottom", ha="right")
-    ax1.set_xticks(list(x))
+    ax2.annotate("1.24x", (len(labels) - 0.5, 1.24), fontsize=7, va="bottom", ha="right")
+
+    ax1.set_xticks(x)
     ax1.set_xticklabels(labels)
     ax1.grid(False)
-    ax1.legend(handles=[b1, b2], loc="lower center", ncol=2,
-               bbox_to_anchor=(0.5, 1.14), fontsize=8, framealpha=0.9)
-    fig.suptitle("Drafter ablation: QoE and speedup (k=3 and k=5, sample mode)",
-                 y=0.98, fontsize=10)
+    ax1.annotate("M6: 2x speedup\nbut -3.0 +- 1.9 % QoE",
+                 (6, -3.0), xytext=(3.6, -5.6), fontsize=7, ha="left",
+                 arrowprops=dict(arrowstyle="->", lw=0.7))
+    from matplotlib.patches import Patch
+    ax1.legend(handles=[
+        Patch(facecolor="0.85", label=f"A1 seed spread (+-{a1_cv:.1f} %)"),
+        Patch(facecolor="0.6", edgecolor="black", label=r"$\Delta$QoE (left)"),
+        Patch(facecolor="white", edgecolor="black", hatch="////", label="speedup (right)"),
+        Patch(facecolor="0.6", edgecolor="black", hatch="....", label="M6 (drafter + selectors)"),
+    ], loc="lower center", ncol=2, bbox_to_anchor=(0.5, 1.02), fontsize=7.5,
+        framealpha=0.9)
+    fig.suptitle("Drafter ablation, 4 seeds: QoE cost and speedup (mean +- std)",
+                 y=1.0, fontsize=10)
     save(fig, out_dir, "fig1_qoe_speedup",
-         "Figure 1. QoE (solid grey, left axis) and latency speedup vs the "
-         "all-off baseline A1 (hatched, right axis) for the drafter ablation, "
-         "trace-num 100 / fcc-test / video1, sample verification. Error bars on "
-         "speedup are the +-1.9 % back-to-back latency drift measured in the "
-         "determinism check; QoE is exactly reproducible and carries none. "
-         "Dashed line: parity (1.0x). Dash-dot: the 1.24x target. mpc stays "
-         "below parity; every zero-search drafter clears 1.24x, at a QoE cost "
-         "of 1.5-4 %.")
+         "Figure 1. Drafter ablation over seeds {1,2,3,4}, fcc-test 100 traces / "
+         "video1 / sample verification, one RTX 3090. Grey bars (left axis): QoE "
+         "change vs the same-seed all-off baseline A1; error bars are the "
+         "seed-to-seed std (n=4). Shaded band: A1's own QoE spread across seeds "
+         "(the noise floor). Hatched bars (right axis): latency speedup vs A1, "
+         "mean +- std; the std is dominated by cross-session latency drift, not "
+         "behaviour (q varies < 0.7 pp, Fig. 2). Dashed line: parity; dash-dot: "
+         "the 1.24x target. mpc k3 is a single seed-1 point. Every zero-search / "
+         "hybrid drafter clears 1.24x; at k=3 the QoE change sits inside the A1 "
+         "seed band (no measurable cost). M6 (drafter + Temporal/Token selectors, "
+         "dotted bar) is the exception: 2.03x speedup but a -3.0 +- 1.9 % QoE "
+         "cost, negative at all four seeds.")
 
 
 # --------------------------------------------------------------------------
@@ -216,15 +261,148 @@ def fig3(sweep, out_dir):
 
 # --------------------------------------------------------------------------
 def fig4(t, out_dir):
-    """drafter+gate x [agreement, q, speedup, dQoE, drebuffer] + buffer-band agreement."""
+    """drafter comparison, 4-seed: rebuffering cost (left) + 1-step agreement by buffer band (right)."""
+    ss = read_seed_sweep()
+    conds = ["m2 repeat-last k3", "m3 hybrid k3", "m4 repeat-last k5",
+             "m5 hybrid k5", "m6 repeat-last k3+sel"]
+    labels = ["repeat\nk3", "hybrid\nk3", "repeat\nk5", "hybrid\nk5", "M6\nk3+sel"]
+    is_m6 = [False, False, False, False, True]
+    dreb = [ss[c]["dreb_mean"] for c in conds]
+    dreb_e = [ss[c]["dreb_std"] for c in conds]
+    q = [ss[c]["q_mean"] for c in conds]
+    spd = [ss[c]["spd_mean"] for c in conds]
+    a1_reb_sd = ss["A1 (no spec)"]["reb_std"]
+
+    da = {p: json.loads((AB / f"decision_analysis_{p}.json").read_text())
+          for p in ("m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3")}
+
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(9.2, 3.7),
+                                   gridspec_kw={"width_ratios": [3, 2]})
+
+    # ---- left: Delta-rebuffering vs same-seed A1, mean +- std ----
+    x = list(range(len(labels)))
+    axL.axhspan(-a1_reb_sd, a1_reb_sd, color="0.85", zorder=0)
+    for i in x:
+        axL.bar(i, dreb[i], 0.55, color="0.6",
+                hatch="...." if is_m6[i] else "",
+                edgecolor="black", linewidth=0.8, zorder=3)
+    axL.errorbar(x, dreb, yerr=dreb_e, fmt="none", ecolor="black",
+                 elinewidth=0.9, capsize=3, zorder=4)
+    axL.axhline(0, color="black", lw=0.8)
+    for i in x:
+        axL.annotate(f"q {q[i]:.0f}%\n{spd[i]:.2f}x", (i, -14), ha="center",
+                     fontsize=6.5, va="top")
+    axL.set_xticks(x)
+    axL.set_xticklabels(labels)
+    axL.set_ylabel(r"$\Delta$rebuffering vs same-seed A1 (s)")
+    axL.set_ylim(-22, 78)
+    axL.set_title("Rebuffering cost (4 seeds, mean +- std)")
+    axL.annotate("A1 seed spread\n(+-%.0f s)" % a1_reb_sd, (0, a1_reb_sd),
+                 xytext=(0.0, 40), fontsize=6.5, ha="center",
+                 arrowprops=dict(arrowstyle="->", lw=0.6))
+    axL.annotate("M6", (4, dreb[4]), xytext=(3.2, 66), fontsize=7,
+                 arrowprops=dict(arrowstyle="->", lw=0.7))
+    axL.grid(axis="x")
+
+    # ---- right: draft 1-step agreement by buffer band (mechanism, seed 1) ----
+    bands = ["<5s", "5-10s", "10-20s", ">=20s"]
+    band_names = ["mpc k3", "repeat-last k3", "hybrid k3"]
+    for j, ph in enumerate(("m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3")):
+        by = {b["band"]: b for b in da[ph]["by_buffer"]}
+        y = [by[b]["mpc_step1_rate"] if b in by and by[b]["mpc_step1_rate"] is not None
+             else None for b in bands]
+        axR.plot([i for i, v in enumerate(y) if v is not None],
+                 [v for v in y if v is not None],
+                 marker=["*", "s", "^"][j], color="black", ls=["-", "--", ":"][j],
+                 label=band_names[j])
+    axR.set_xticks(range(len(bands)))
+    axR.set_xticklabels(bands, fontsize=7)
+    axR.set_ylabel("draft 1-step agreement")
+    axR.set_ylim(0, 1.0)
+    axR.set_title("Agreement by buffer band (seed 1)")
+    axR.legend(fontsize=7)
+    save(fig, out_dir, "fig4_drafter_comparison",
+         "Figure 4. Left: total-rebuffering change vs the same-seed all-off "
+         "baseline A1, per drafter, mean +- std over seeds 1-4 "
+         "(drafter_seed_sweep_20260910); each bar annotated with its mean "
+         f"queue-serve share q and speedup. Shaded band: A1's own rebuffering "
+         f"spread across seeds (std +-{a1_reb_sd:.0f} s) -- the noise floor. "
+         "Every k=3 drafter's rebuffering change sits inside that band; k=5 is "
+         "worse; M6 (dotted bar, drafter + Temporal/Token selectors) adds "
+         "+38 +- 29 s and is the only condition clearly outside the band. "
+         "Right: draft 1-step agreement with the policy split by buffer band "
+         "(seed 1, mechanism) -- repeat-last agrees ~88 percent everywhere; "
+         "hybrid drops to ~43 percent in the <5s band because it routes those "
+         "decisions to mpc.")
+
+
+SGT = REPO / "results" / "soyun" / "serve_gate_20260909" / "analysis" / "serve_gate_table.csv"
+A1_REB = 6.39172
+
+
+def read_gate():
+    with open(SGT) as f:
+        return list(csv.DictReader(f))
+
+
+# --------------------------------------------------------------------------
+# ARCHIVED seed-1 versions of fig1 / fig4 (superseded 2026-09-10 by the 4-seed
+# versions above; kept for provenance -- rendered into <out>/archive/ with a
+# _seed1 suffix). The narrative these support was retired: see DRAFTER_ABLATION
+# section 9.13 / RNG_CONTAMINATION_AUDIT.
+def fig1_seed1_archived(t, out_dir):
+    """[ARCHIVED seed-1] 6 conditions x [QoE, speedup] dual axis."""
+    order = ["a1", "m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3",
+             "m4_repeat_k5", "m5_hybrid_k5"]
+    labels = ["A1\nall-off", "mpc\nk3", "repeat\nk3", "hybrid\nk3",
+              "repeat\nk5", "hybrid\nk5"]
+    qoe = [A1_QOE] + [fnum(t[p]["qoe"]) for p in order[1:]]
+    spd = [1.0] + [fnum(t[p]["speedup_vs_a1"]) for p in order[1:]]
+
+    fig, ax1 = plt.subplots(figsize=(6.4, 3.8))
+    fig.subplots_adjust(top=0.78)
+    x = range(len(order))
+    b1 = ax1.bar([i - 0.2 for i in x], qoe, 0.4, color="0.75",
+                 edgecolor="black", linewidth=0.7, label="QoE (raw mean)")
+    ax1.set_ylabel("QoE (raw mean)")
+    ax1.set_ylim(0.85, 0.97)
+    ax1.axhline(A1_QOE, color="black", ls=":", lw=1)
+    ax1.annotate("A1 QoE 0.949", (0.0, A1_QOE), fontsize=7, va="bottom", ha="left")
+    ax2 = ax1.twinx()
+    b2 = ax2.bar([i + 0.2 for i in x], spd, 0.4, color="white", hatch="////",
+                 edgecolor="black", linewidth=0.7, label="speedup vs A1")
+    ax2.errorbar([i + 0.2 for i in x], spd, yerr=[s * 0.019 for s in spd],
+                 fmt="none", ecolor="black", elinewidth=0.8, capsize=2)
+    ax2.set_ylabel("speedup vs A1 (latency ratio)")
+    ax2.set_ylim(0.0, 1.6)
+    ax2.axhline(1.0, color="black", ls="--", lw=1)
+    ax2.axhline(1.24, color="0.4", ls="-.", lw=1)
+    ax2.annotate("1.24x", (len(order) - 0.5, 1.24), fontsize=7, va="bottom", ha="right")
+    ax1.set_xticks(list(x))
+    ax1.set_xticklabels(labels)
+    ax1.grid(False)
+    ax1.legend(handles=[b1, b2], loc="lower center", ncol=2,
+               bbox_to_anchor=(0.5, 1.14), fontsize=8, framealpha=0.9)
+    fig.suptitle("[ARCHIVED seed-1] Drafter ablation: QoE and speedup",
+                 y=0.98, fontsize=10)
+    save(fig, out_dir, "fig1_qoe_speedup_seed1",
+         "Figure 1 [ARCHIVED, seed 1 only -- superseded by the 4-seed Fig. 1]. "
+         "QoE (grey, left) and speedup vs A1 (hatched, right) for the drafter "
+         "ablation at --seed 1. The QoE 'cost of 1.5-4 %' shown here did not "
+         "survive a 4-seed re-measurement (DRAFTER_ABLATION 9.13): at k=3 it is "
+         "inside the seed noise. Kept for provenance.")
+
+
+def fig4_seed1_archived(t, out_dir):
+    """[ARCHIVED seed-1] drafter+serve-gate metrics + buffer-band agreement."""
     gate = {r["phase"]: r for r in read_gate()}
     da = {p: json.loads((AB / f"decision_analysis_{p}.json").read_text())
           for p in ("m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3")}
-    names = ["repeat-last k3", "hybrid k5\n(no gate)", "hybrid k5\n+ v2 gate (4/4)"]
+    names = ["repeat-last k3", "hybrid k5\n(no gate)", "hybrid k5\n+ v2 gate"]
     src = [t["m2_repeat_k3"], gate["m5_ctrl"], gate["v_hybrid_k5_f5_cons"]]
-
     metrics = ["draft 1-step\nagreement", "q\n(queue serve)", "speedup\nvs A1",
-               "ΔQoE\nvs A1", "Δrebuffer\nvs A1 (s, /50)"]
+               "dQoE\nvs A1", "drebuffer\nvs A1 (s, /50)"]
+
     def get(r, k):
         return fnum(r.get(k))
     vals = []
@@ -234,26 +412,22 @@ def fig4(t, out_dir):
             get(r, "q_queue_serve") if "q_queue_serve" in r else get(r, "q"),
             (get(r, "speedup_vs_a1") or 1.0) - 1.0,
             (get(r, "d_qoe_pct") or 0.0) / 100.0,
-            (get(r, "d_rebuffer_s") if "d_rebuffer_s" in r else get(r, "d_rebuffer_s")) / 50.0
-                if (r.get("d_rebuffer_s") is not None) else None,
+            (get(r, "d_rebuffer_s") / 50.0) if (r.get("d_rebuffer_s") is not None) else None,
         ])
-
     fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.8, 3.6),
                                    gridspec_kw={"width_ratios": [3, 2]})
     hatches = ["////", "", "xxx"]
     w = 0.25
-    for j, (nm, hz) in enumerate(zip(names, hatches)):
+    for j, hz in enumerate(hatches):
         axL.bar([i + (j - 1) * w for i in range(len(metrics))],
                 [vals[j][i] for i in range(len(metrics))], w, color="0.85",
-                hatch=hz, edgecolor="black", linewidth=0.7, label=nm)
+                hatch=hz, edgecolor="black", linewidth=0.7, label=names[j])
     axL.axhline(0, color="black", lw=0.8)
     axL.set_xticks(range(len(metrics)))
     axL.set_xticklabels(metrics, fontsize=7)
-    axL.set_ylabel("value (fractions; speedup as Δ from 1.0)")
-    axL.set_title("Serve gate: hybrid k5 before / after")
+    axL.set_ylabel("value (fractions; speedup as d from 1.0)")
+    axL.set_title("[ARCHIVED] Serve gate: hybrid k5 before / after")
     axL.legend(fontsize=6.5)
-
-    # right: draft 1-step agreement by buffer band (the base drafters)
     bands = ["<5s", "5-10s", "10-20s", ">=20s"]
     band_names = ["mpc k3", "repeat-last k3", "hybrid k3"]
     for j, ph in enumerate(("m1a_mpc_k3_sample", "m2_repeat_k3", "m3_hybrid_k3")):
@@ -270,25 +444,12 @@ def fig4(t, out_dir):
     axR.set_ylim(0, 1.0)
     axR.set_title("Agreement by buffer band")
     axR.legend(fontsize=7)
-    save(fig, out_dir, "fig4_drafter_comparison",
-         "Figure 4. Left: repeat-last k3 and hybrid k5 without / with the v2 "
-         "serve-time gate (conservative, floor 5 s), on five metrics -- draft "
-         "1-step agreement, queue-serve share q, speedup as delta from 1.0, "
-         "delta-QoE vs A1, and delta-rebuffer vs A1 (scaled /50 s to share the "
-         "axis). The gate pulls hybrid k5's delta-QoE and delta-rebuffer back to "
-         "~0 (rebuffering 18.5 -> 1.6 s) at a 1.5 % speedup cost. Right: draft "
-         "1-step agreement split by buffer band -- repeat-last agrees with the "
-         "policy ~88 % everywhere; hybrid drops to ~43 % in the <5s band because "
-         "it routes those decisions to mpc.")
-
-
-SGT = REPO / "results" / "soyun" / "serve_gate_20260909" / "analysis" / "serve_gate_table.csv"
-A1_REB = 6.39172
-
-
-def read_gate():
-    with open(SGT) as f:
-        return list(csv.DictReader(f))
+    save(fig, out_dir, "fig4_drafter_comparison_seed1",
+         "Figure 4 [ARCHIVED, seed 1 only -- superseded by the 4-seed Fig. 4]. "
+         "Left: hybrid k5 before/after the v2 serve-time gate. The serve gate "
+         "was later withdrawn (inert once measured without the seed-once RNG "
+         "confound, CHANGE_REQUEST_SERVE_TIME_GATE). Right: 1-step agreement by "
+         "buffer band (unchanged, still valid). Kept for provenance.")
 
 
 def fig5(out_dir):
@@ -449,6 +610,8 @@ def main():
     args = ap.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    archive = out / "archive"
+    archive.mkdir(exist_ok=True)
     t = read_table()
     sweep = read_sweep()
     print("writing figures ->", out)
@@ -459,6 +622,12 @@ def main():
     for fn in (fig5, fig6):
         try:
             fn(out)
+        except (FileNotFoundError, KeyError) as e:
+            print(f'  {fn.__name__} skipped ({e})')
+    print("writing archived seed-1 figures ->", archive)
+    for fn in (fig1_seed1_archived, fig4_seed1_archived):
+        try:
+            fn(t, archive)
         except (FileNotFoundError, KeyError) as e:
             print(f'  {fn.__name__} skipped ({e})')
 
