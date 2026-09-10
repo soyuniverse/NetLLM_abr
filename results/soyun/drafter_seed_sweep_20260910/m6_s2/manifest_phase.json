@@ -1,0 +1,136 @@
+{
+  "run_id": "drafter_seed_sweep_20260910",
+  "phase": "m6_s2",
+  "utc": "2026-09-10T03:15:07.461748+00:00",
+  "git_commit": "35f06f5d79fb9fbf937b820c0a9355b6740c94f5",
+  "git_branch": "soyun/spec-abr",
+  "git_status_porcelain": "?? abr_spec/build_seed_sweep_report.py\n?? abr_spec/run_drafter_seed_sweep.sh\n?? docs/soyun/TEAM_ALERT_RNG_CONTAMINATION.md\n?? results/soyun/drafter_seed_sweep_20260910/",
+  "argv_expanded": [
+    "run_plm.py",
+    "--test",
+    "--fp16",
+    "--plm-type",
+    "llama",
+    "--plm-size",
+    "base",
+    "--rank",
+    "128",
+    "--plm-dir",
+    "../downloaded_plms/llama/base",
+    "--model-dir",
+    "../downloaded_plms/ft_plms/try_llama2_7b",
+    "--trace",
+    "fcc-test",
+    "--trace-num",
+    "100",
+    "--video",
+    "video1",
+    "--fixed-order",
+    "--device",
+    "cuda:0",
+    "--device-out",
+    "cuda:0",
+    "--seed",
+    "2",
+    "--temporal-selector",
+    "event-aware",
+    "--token-selector",
+    "intra-timestep",
+    "--speculative-draft-steps",
+    "3",
+    "--speculative-verification-mode",
+    "sample",
+    "--speculative-buffer-tolerance",
+    "1.0",
+    "--speculative-state-tolerance",
+    "0.25",
+    "--speculative-return-tolerance",
+    "0.01"
+  ],
+  "seed": 2,
+  "determinism_notes": [
+    "run_plm.set_random_seed() (run_plm.py:332) and test_on_env() (test.py:42) re-seed numpy/torch/torch.cuda/random from --seed at run start.",
+    "run_plm.py:501 sets torch.backends.cudnn.benchmark=True (upstream, not modifiable here) -> CUDA matmul/conv kernels are autotuned, so results are NOT guaranteed bitwise-reproducible run to run.",
+    "phase test_a uses stochastic sampling (rl_policy._sample -> random.choices, seeded); test_b uses --speculative-verification-mode greedy (argmax, deterministic given fixed weights)."
+  ],
+  "cfg_overrides": {
+    "plm_ft_dir": "/root/NetLLM_abr/results/soyun/checkpoints/official_abr_r128",
+    "results_dir": "/root/NetLLM_abr/results/soyun/drafter_seed_sweep_20260910/m6_s2/raw"
+  },
+  "cwd": "/root/NetLLM_abr/adaptive_bitrate_streaming",
+  "python": "3.10.13",
+  "package_versions": {
+    "torch": "2.2.0",
+    "transformers": "4.34.1",
+    "peft": "0.6.2",
+    "numpy": "1.24.4",
+    "accelerate": "0.23.0"
+  },
+  "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+  "decision_trace": "results/soyun/drafter_seed_sweep_20260910/m6_s2/decisions.jsonl",
+  "drafter": {
+    "drafter": "repeat-last",
+    "patched": true,
+    "buffer_threshold": null,
+    "cv_threshold": null,
+    "class": "RepeatLastDraftGenerator"
+  },
+  "serve_gate": {
+    "gate": "serve-buffer-floor",
+    "floor_seconds": 0.0,
+    "check_predicted": false,
+    "mode": "fallback",
+    "step": 1,
+    "patched": false
+  },
+  "parsed": {
+    "adapt": false,
+    "test": true,
+    "fixed_order": true,
+    "rank": "128",
+    "num_epochs": null,
+    "eval_per_epoch": null,
+    "trace": "fcc-test",
+    "trace_num": "100",
+    "video": "video1",
+    "speculative_draft_steps": "3",
+    "speculative_verification_mode": "sample",
+    "temporal_selector": "event-aware",
+    "token_selector": "intra-timestep"
+  },
+  "current_gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08",
+  "prior_run_gpus": {
+    "baseline6_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "determinism_20260908": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "drafter_ab_20260908": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "rng_audit_20260909": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "serve_gate_20260909": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08"
+    ],
+    "smoke_ckpt_1ep_20260831": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05"
+    ],
+    "smoke_spec_a_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "smoke_spec_b_20260901": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "sweep_spec_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ],
+    "trace_smoke_20260902": [
+      "NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03"
+    ]
+  },
+  "instance_changed": true,
+  "instance_change_note": "this run GPU 'NVIDIA GeForce RTX 3090, 24576 MiB, 570.172.08' differs from earlier results/soyun runs ['NVIDIA GeForce RTX 3090, 24576 MiB, 535.154.05', 'NVIDIA GeForce RTX 3090, 24576 MiB, 595.58.03']; inference_latency absolute values are NOT comparable across instances -- only a same-GPU run may serve as a latency baseline."
+}
