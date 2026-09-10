@@ -77,15 +77,17 @@ draft-time fix only if a larger seed sample later shows a real cost.
    failures rather than fixing them (buffer fallbacks 236→43 while state
    fallbacks 32→191, total ~unchanged). BASELINE6's −3.13 % QoE turned out to be
    the **greedy** verification mode, not speculation (with `sample`: **+0.81 %**).
-5. **Drafter replacement — RUN 2026-09-08 ([[DRAFTER_ABLATION]]).** `mpc` /
-   `repeat-last` / `hybrid` behind `--speculative-drafter`. On a new instance
-   (driver 570, own A1 = 80.627 ms): repeat-last k3 **1.419×** (q 37.8 %),
-   hybrid k3 1.413×, k5 pair 1.31–1.33×, M6 (repeat-last + Temporal/Token
-   selectors) **2.102×**. mpc still < 1.0×. The post-hoc `q ≈ 35 %` estimate
-   held (measured 37.8 %). **Conditional success**: rebuffering rises to
-   18–37 s (A1 6.4 s); the queue-serve safety metric's incidence gate passes
-   but the total-rebuffer gate fails (DRAFTER_ABLATION §S). k=8 blocked by the
-   read-only `run_plm.py:298` cap ([[NEEDS_UPSTREAM]] #5); ablation ran k∈{3,5}.
+5. **Drafter replacement — 4-seed 2026-09-10 ([[DRAFTER_ABLATION]] §9.13).**
+   `mpc` / `repeat-last` / `hybrid` behind `--speculative-drafter`. 4-seed
+   mean±std: repeat-last k3 **1.49 ± 0.08×** (q 38.2 ± 0.3 %), hybrid k3
+   1.50 ± 0.08×, k5 pair ~1.46–1.48× (worse — higher Δrebuffering), M6
+   (repeat-last + Temporal/Token selectors) **2.03 ± 0.10×**. mpc still ~1.0×.
+   **k=3 has no QoE/rebuffering cost distinguishable from zero at 4 seeds**
+   (ΔQoE +0.4 ± 2.1 %, Δrebuffering +5 ± 23 s vs same-seed A1, whose own
+   rebuffering is 16.9 ± 11.6 s). **M6 is the exception: −3.0 ± 1.9 % QoE.** The
+   seed-1 "conditional success / rebuffering 18–37 s" was an outlier-trace
+   artifact. k=8 blocked by the read-only `run_plm.py:298` cap
+   ([[NEEDS_UPSTREAM]] #5); ablation ran k∈{3,5}.
 
 Why a different drafter should work, in one line: MPC's proposal matches the
 LoRA policy's own next action **12.84 %** of the time; "repeat the last action"

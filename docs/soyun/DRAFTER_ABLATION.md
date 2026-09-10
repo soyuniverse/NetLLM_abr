@@ -131,7 +131,13 @@ rebuffering A1 의 2.9–5.8×" 는 seed 1 아티팩트였고, **§9.13 에서 4
   안정적이다. **이 실험의 speedup 은 절대 ms 가 아니라 같은 인스턴스의 A1 대비
   비율로만 인용한다** (§0, §2).
 
-## 2. Drafter × k 결과 (Task 1) — **speedup 1.0 돌파 (조건부)**
+## 2. Drafter × k 결과 (Task 1) — seed 1 측정 (**비용 판정은 §9.13 이 대체**)
+
+> **이력 주의.** 아래 표는 **seed 1 단독** 측정이다. speedup·q·1-step 은 §9.13
+> 에서 4-seed 로 재확증됐다. **"QoE 미달" / "rebuffering 2.9–5.8× (조건부 성공)"
+> 판정은 §9.13 에서 폐기**됐다 — 4-seed 에서 k=3 의 ΔQoE·Δrebuffering 은 A1 의
+> seed 노이즈와 구분되지 않는다 (M6 만 유의). 이 절의 seed-1 수치는 provenance 로
+> 보존한다.
 
 집계: `results/soyun/drafter_ab_20260908/analysis/drafter_ablation_table.{csv,md}`.
 speedup 는 **이 인스턴스의 A1 (80.627 ms)** 대비. 전 phase trace-num 100 / seed 1 /
@@ -153,11 +159,12 @@ sample (m1b 만 greedy, BASELINE6 E 연속성용) / tolerance 1.0-0.25-0.01 고�
 | **speedup > 1.0** (파라미터 스윕이 못 넘은 선) | **넘었다.** zero-search drafter 4종 모두 1.31×–1.42×. mpc 는 여전히 <1.0 (0.96–0.97×). |
 | **1.24× 선** (q=31.43 %, BASELINE6) | **넘었다.** m2/m3 는 speedup 으로도 q(37 %)로도 통과. m4/m5 는 speedup 1.31/1.33× 로 통과하나 q(42 %)가 이 인스턴스의 k=5 필요치(§Task2)에 아슬아슬. |
 | **QoE 유지** (A1 0.94872 대비 ±1 %) | **미달.** 최선이 m2 −1.53 %, m5 −1.97 %, m4 −3.96 %. mpc-sample(m1a) 만 +0.81 %. zero-search drafter 는 speedup 을 위해 QoE 를 1.5–2 % 내준다. |
-| **rebuffering 유의 증가 없음** | **증가.** 총 rebuffering 이 A1 6.39 s → **18.5–37.1 s (2.9×–5.8×)**. 사전 임계(> 0.64 s) 를 크게 초과. |
+| **rebuffering 유의 증가 없음** | ~~증가 (seed 1: 18.5–37.1 s)~~ **→ §9.13: 4-seed 에서 k=3 은 A1 seed 밴드 안, 판정 폐기.** |
 
-→ **결론: "조건부 성공."** speedup 은 파라미터로 못 넘던 1.0 을 확실히 넘었고
-1.24× 도 통과했지만, **rebuffering 이 유의하게 증가**하므로 Task 1.3 규정대로
-조건부로만 기록한다. 안전 지표 분석은 §S 결과, hybrid 대조는 §2.3.
+→ ~~**결론: "조건부 성공."**~~ **§9.13 이 대체**: speedup·q 헤드라인은 4-seed 로
+확정, k=3 의 QoE·rebuffering 비용은 seed 1 아티팩트였고 4-seed 에서 0 과 구분
+불가 (M6 만 유의한 −3.0 % QoE). 아래 seed-1 판정은 이력. 안전 지표 분석은 §S,
+hybrid 대조는 §2.3.
 
 ### 2.2 왜 되는가 — draft 일치율
 
@@ -340,18 +347,28 @@ rebuffering 이 0** 이다 — k=3 에서는 hybrid 의 라우팅이 queue 엔�
 보호가 깨진다(m5 의 1.46 s spike). 즉 **hybrid 는 k 를 짧게 유지할 때만 queue
 안전 이점이 있고, 그 이점은 총 QoE·rebuffering 을 되돌리진 못한다.**
 
-### S.7 안전성 최종 판정
+### S.7 안전성 최종 판정 (**seed 1 — §9.13 이 대체**)
+
+> 이 판정은 seed 1 의 총-rebuffering 게이트에 근거했다. **§9.13 에서 4-seed 로
+> 재측정하면 k=3 의 Δrebuffering 은 A1 의 seed 밴드 안**이라 "총량 게이트 실패"
+> 가 성립하지 않는다. incidence 게이트(아래)는 여전히 유효 (기전 지표).
 
 - **incidence 게이트: 통과.** queue serve 가 LLM 호출보다 rebuffer 를 더 자주
   유발하지 않는다 (C ≤ 0.97× mpc, 사전 임계 2× 미달).
-- **총량 게이트: 실패.** 총 rebuffering 이 A1 의 2.9–5.8×, 사전 임계(0.64 s) 초과.
-- → **"조건부 성공"** 확정. speedup > 1.24× 는 달성했으나 안전 기준 미달.
-  실무 배치 전 필수 후속: (a) queue 엔트리에 **실행 시점 버퍼 재검사** 추가
-  (draft 시점이 아니라), (b) `<5s` 버퍼에서는 queue serve 금지, (c) buffer
-  tolerance 재조정 (§2.3). 이들은 `plm_special/speculative/` 및 rl_policy 변경이
-  필요하므로 팀 리드 승인 후 별도 실험.
+- ~~**총량 게이트: 실패.**~~ **seed 1 에서만** 총 rebuffering 이 A1 의 2.9–5.8×
+  였다. 4-seed: k=3 Δrebuffering +5–6 ± 12–23 s (A1 밴드 ±12 s 안), **판정 폐기**
+  (§9.13). M6 만 +38 ± 29 s 로 유의.
+- → ~~**"조건부 성공" 확정**~~. **§9.13 이 대체.** 실무 배치: **repeat-last /
+  hybrid k=3, 게이트 없이** ([[SUBMISSION_SUMMARY]]). serve-time 게이트는
+  조사 후 철회 ([[CHANGE_REQUEST_SERVE_TIME_GATE]]); draft-time 재검사(§S.7 (a))
+  는 4-seed 에서 고칠 비용이 없으므로 LOW ([[PAPER_ASSETS_ABR]] G3).
 
 ## 4. Temporal+Token 결합 경로 (Task 3) — **드라이버가 선택기 위에 얹혀 이득 큼**
+
+> seed 1 분석. M6 의 4-seed 판정은 §9.13: speedup **2.03 ± 0.10×** 재확증,
+> 단 **ΔQoE −3.0 ± 1.9 % (4 seed 전부 음수) — 이 실험에서 유일하게 유의한 비용**.
+> 아래 곱셈적 결합 논증(1.382 × 1.419 ≈ 2.10)은 seed 1 에서 성립하고 4-seed
+> 평균과도 일치한다.
 
 speedup > 1.0 을 달성했으므로 Task 3 을 진행했다. 최선 drafter = **repeat-last k=3**
 (speedup 최고 1.419×, zero-search 중 QoE 최고). BASELINE6 condition D
